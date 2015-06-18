@@ -12,4 +12,5 @@ License: What license is it under?
 LazyData: true
 Imports: corrplot
 Suggests: ncdf4,
-    dplyr
+    knitr
+VignetteBuilder: knitr

@@ -1,4 +1,4 @@
-devtools::use_package("dplyr", "Suggests")# Function to check how many levels of elevation a given
+# Function to check how many levels of elevation a given
 # Net CDF file has
 check_elevation <- function(ncdf_filename) {
     # Load in the NCDF file and check to see

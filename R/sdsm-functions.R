@@ -44,6 +44,39 @@ name_lookup <- function(filename){
     return(var.name)
 }
 
+compute_error <- function(predictions, observations, type = "regression"){
+    if (type == "regression") {
+        rmse <- sqrt(sum((predictions - observed)^2)/length(predictions))
+        mae <- sum(abs(predictions - observed))/length(predictions)
+        return(list(rmse=rmse, mae=mae))
+    } else if (type == "classification") {
+        abs_error <- sum(abs(predictions - observations))/length(predictions)
+        return(abs_error)
+    }
+}
+
+split_dataframe <- function(dataframe, percentage=.6){
+    split_num <- floor(nrow(dataframe)*.6)
+    train  <- dataframe[1:split_num,]
+    test <- dataframe[(split_num+1):nrow(dataframe),]
+    return(list(train = train, test = test))
+}
+
+#' Generate diagnostic plots for predictors and predictands.
+#'
+#' This function is meant to replicate the screen variables
+#' section of the SDSM tool. It creates two plots, the table
+#' which shows the correlations between predictors in all individual
+#' months and annually, as well as the
+#'
+#' @param plotname The filepath in which you want to save t
+#' @param dataframe a dataframe object which contains a column
+#' of dates, the predictand (response) variable, as well as the
+#' predictor variablesto explore.
+#' @param y The predictand (response) variable name from the
+#' same dataframe
+#' @return A correlation matrix between predictor variables and
+#' two PDF file diagnostic plots.
 generate_table <- function(plotname, dataframe, y){
     ## Get the initital information such as number of predictors and data-points
     times <- c("january", "february", "march", "april", "may", "june", "july",
@@ -73,11 +106,11 @@ generate_table <- function(plotname, dataframe, y){
         tmp <- cor(subset_df[,!names(subset_df) %in% c("dates")])
         top_vars <- order(abs(as.vector(tmp[,response_name])), decreasing=TRUE)
         if (length(top_vars) < 15) {
-            corrplot(tmp[top_vars, top_vars], method="square", addgrid.col="black",
+            corrplot::corrplot(tmp[top_vars, top_vars], method="square", addgrid.col="black",
                      addCoef.col = "black", tl.col="black",
                      title = paste0(times[i], " Top Variable Correlations"))
         } else {
-            corrplot(tmp[top_vars[1:15], top_vars[1:15]], method="square", addgrid.col="black",
+            corrplot::corrplot(tmp[top_vars[1:15], top_vars[1:15]], method="square", addgrid.col="black",
                      addCoef.col = "black", tl.col="black",
                      title = paste0(times[i], " Top Variable Correlations"))
         }
@@ -118,7 +151,7 @@ generate_table <- function(plotname, dataframe, y){
             page <- seq(1+((i-1)*maxrow), nrow(results))
         }
         ## Correlation Plot to add into the
-        corrplot(results[page,], method="circle", is.corr=FALSE, cl.lim = c(0,1),
+        corrplot::corrplot(results[page,], method="circle", is.corr=FALSE, cl.lim = c(0,1),
                  addgrid.col="black",addCoef.col = "black", tl.col="black",
                  title = "Monthly and Annual explained \n Variance by Predictor")
     }
@@ -126,24 +159,6 @@ generate_table <- function(plotname, dataframe, y){
 
     ## Return the correlation matrix
     return(results)
-}
-
-compute_error <- function(predictions, observations, type = "regression"){
-    if (type == "regression") {
-        rmse <- sqrt(sum((predictions - observed)^2)/length(predictions))
-        mae <- sum(abs(predictions - observed))/length(predictions)
-        return(list(rmse=rmse, mae=mae))
-    } else if (type == "classification") {
-        abs_error <- sum(abs(predictions - observations))/length(predictions)
-        return(abs_error)
-    }
-}
-
-split_dataframe <- function(dataframe, percentage=.6){
-    split_num <- floor(nrow(dataframe)*.6)
-    train  <- dataframe[1:split_num,]
-    test <- dataframe[(split_num+1):nrow(dataframe),]
-    return(list(train = train, test = test))
 }
 
 
