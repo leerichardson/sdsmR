@@ -1,0 +1,15 @@
+Package: sdsmR
+Title: Implementation of Statistical Downscaling
+Version: 0.0.0.9000
+Authors@R: person("Lee", "Richardson", email = "leerichardson2013@gmail.com", role = c("aut", "cre"))
+Description: This package implements Statistical Downscaling for
+    similar to the SDSM tool from Rob Wibly. Included are functions
+    which mirror the functions commonly used by SDSM users, as well as a
+    tutorial on how to re create the Blogsville analysis from the SDSM
+    Manual.
+Depends: R (>= 3.2.0)
+License: What license is it under?
+LazyData: true
+Imports: corrplot
+Suggests: ncdf4,
+    dplyr
