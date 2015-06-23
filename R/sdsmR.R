@@ -8,9 +8,7 @@
 #' Re analysis data, which is used to calibrate sdsm models.
 #'
 #' @section sdsmR functions:
-#' \code{\link{get_ncep_vars}}
 #' \code{\link{generate_table}}
-#' \code{\link{calibrate_model}}
 #'
 #' @docType package
 #' @name sdsmR

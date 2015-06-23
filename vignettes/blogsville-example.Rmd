@@ -9,71 +9,76 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+
 # Introduction
 
-In this document, we will talk through how to perform 
+In this document, we will talk through how to perform statistical downscaling, such as the kind performed by the Statistical Downscaling Model (SDSM) tool, in the R language. Statistical downscaling is a method of relating large scale variables such as those from General Circulation Model (GCM) output, or Re-Analysis data, to local, usually pointwise variables. Statistical downscaling provides a method for performing local impact studies, such as assessing the risk of flooding in a particular city, under different climate change scenario's. At a high level, what's being done is building a statistical model of the relationship between these large scale variables (such as surface temperature inside a gridbox), and and a local variable using re-analysis data, and then using this relationship to generate scenario's for how the local variable responds to various climates. 
+
+We will walk through the Blogsville eample used in the SDSM manual, and show how you can perform these calculations in the R language. Also, we will show how you can use various functions provided by the sdsmR package to speed up process. 
 
 # Exploratory Data Analysis 
 
-# Model Calibration 
+## Accessing the data
+Before we do anything, we must load the Blogsville data into our R workspace. Loading data into R is both art and science, and there isn't an exact recipe for loading every dataset you will encounter into R. For this reason, we will include instructions on how to load the Blogsville dataset into R manually in a supplement of this document, to get a flavor for how this is done. For now, we use the blogsville dataframe which comes pre-installed with the sdsmR package to walk through the steps of statistical downscaling. 
+
+```{r}
+# Load the sdsmR package into memory, and view what the 
+# blogsville dataframe looks like. 
+library("sdsmR")
+head(blogsville)
+```
+
+The above code loads in the sdsmR package, which includes a dataframe named blogsville. For detailed description of the data frame and the variables included, use the help command `?blogsville`. 
+
+## Example plots 
+
+Whenever building a statistical model, the first step is to visualize the data and look into the relationships between predictor and predictand variables. For those familiar with the SDSM tool, the first stage of the analysis is usually the Screen Variables section. In SDSM, the three main plots for exploratory data analysis are:
+
+1. The explained variance due to each predictor on the predictand, by month. 
+1. Correlation between all predictor variables, by month. 
+1. Scatterplot of an individual predictor and predictand. 
+
+Creating these first two plots is a bit tricky. Due to this, we have created a function, called generate_table, which can be used to create these informative tables. The structure of this function is that you input a filepath, dataframe, and specify the predictand variable, and as an output you will recieve two pdf files with these two tables, in the filepath specified as an input. For example, here is how I would save the explained variance and correlation tables for maximum temperature into my home directory:
+
+```{r, eval=FALSE}
+generate_table("/home/lee/example", blogsville, tmax)
+```
+
+![alt text](example_cor_explained.pdf)
+
+Next, let's consider how we can create these scatterplots. If you look at the explained variance table created by the generate_table function, you will see that out of all the predictor variables, humidity, or humxx, has the highest correlation with maximum temperature. From this, let's look at how to create a scatterplot of these two variables:
+
+```{r, fig.height = 8, fig.width = 8}
+list.files()
+plot(blogsville$humxx, blogsville$tmax, xlab = "Humidity", 
+     ylab = "Maximum Temperature", main = "Humidity vs. Maximum Temperature", 
+     cex = .1)
+```
+
+
+# Model Calibration
 
 ## Monthly and Seasonal Models 
 
-# Weather Generator 
+
+# Weather Generator
 
 ## Prediction Intervals 
 
+
+
 # Scenario Generation 
+
+
 
 # Conditional Models 
 
 
-# Supplement: Blogsville Data
 
-Vignettes are long form documentation commonly included in packages. Because they are part of the distribution of the package, they need to be as compact as possible. The `html_vignette` output type provides a custom style sheet (and tweaks some options) to ensure that the resulting html is as small as possible. The `html_vignette` format:
+# Supplement: Loading Data
 
-- Never uses retina figures
-- Has a smaller default figure size
-- Uses a custom CSS stylesheet instead of the default Twitter Bootstrap style
-
-## Vignette Info
-
-Note the various macros within the `vignette` section of the metadata block above. These are required in order to instruct R how to build the vignette. Note that you should change the `title` field and the `\VignetteIndexEntry` to match the title of your vignette.
-
-## Styles
-
-The `html_vignette` template includes a basic CSS theme. To override this theme you can specify your own CSS in the document metadata as follows:
-
-    output: 
-      rmarkdown::html_vignette:
-        css: mystyles.css
-
-## Figures
-
-The figure sizes have been customised so that you can easily put two images side-by-side. 
-
-```{r, fig.show='hold'}
-plot(1:10)
-plot(10:1)
-```
-
-You can enable figure captions by `fig_caption: yes` in YAML:
-
-    output:
-      rmarkdown::html_vignette:
-        fig_caption: yes
-
-Then you can use the chunk option `fig.cap = "Your figure caption."` in **knitr**.
-
-## More Examples
-
-You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
-
-```{r, echo=FALSE, results='asis'}
-knitr::kable(head(mtcars, 10))
-```
-
-Also a quote using `>`:
-
-> "He who gives up [code] safety for [code] speed deserves neither."
-([via](https://twitter.com/hadleywickham/status/504368538874703872))
