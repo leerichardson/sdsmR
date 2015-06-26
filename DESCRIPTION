@@ -7,11 +7,11 @@ Description: This package implements Statistical Downscaling for
     which mirror the functions commonly used by SDSM users, as well as a
     tutorial on how to re create the Blogsville analysis from the SDSM
     Manual.
-Depends: R (>= 3.2.0)
+Depends: R (>= 3.1.0)
 License: What license is it under?
 LazyData: true
 Imports: corrplot
-Suggests: 
+Suggests:
     ncdf4,
     knitr,
     testthat

@@ -1,9 +1,3 @@
-# Change the working directory to the location on the computer you're using
-setwd("/home/lee/Dropbox/work/ncar")
-
-# Load in the current SDSM functions
-source("code/sdsm.R")
-
 # Load in the glmnet package so we can run the Lasso
 library("glmnet")
 library("nlme")
@@ -14,21 +8,21 @@ options(digits=3)
 # SETUP/DIAGNOSTICS ------------------------------
 
 # Read in the file which has all of the variable and corresponding filenames.
-file_lookup <- read.csv("data/forthood/forthood_descriptions.csv", stringsAsFactors = FALSE)
+file_lookup <- read.csv("/home/lee/Dropbox/work/ncar/data/forthood/forthood_descriptions.csv", stringsAsFactors = FALSE)
 
 # Obtain a list of all the predictor file and observation files
-predictor_files <- list.files("data/forthood/forthood_ncep_predictors/")
-obs_files <- list.files("data/forthood/forthood_obs/")
+predictor_files <- list.files("/home/lee/Dropbox/work/ncar/data/forthood/forthood_ncep_predictors/")
+obs_files <- list.files("/home/lee/Dropbox/work/ncar/data/forthood/forthood_obs/")
 
 # Loop through each of the predictor variables in order to create a data frame
-test <- read.table("data/forthood/forthood_ncep_predictors/ncep5hlgfh.dat")
+test <- read.table("/home/lee/Dropbox/work/ncar/data/forthood/forthood_ncep_predictors/ncep5hlgfh.dat")
 n <- nrow(test)
 rm(test)
 
 # Set up a matrix to store all of the predictor variables
 predictor_matrix <- as.data.frame(matrix(NA, nrow=n, ncol=0))
 for (file in predictor_files) {
-  temp <- read.table(paste0("data/forthood/forthood_ncep_predictors/", file))
+  temp <- read.table(paste0("/home/lee/Dropbox/work/ncar/data/forthood/forthood_ncep_predictors/", file))
   colnames(temp) <- name_lookup(file)
   predictor_matrix <- cbind(predictor_matrix, temp)
   rm(temp)
@@ -38,17 +32,22 @@ for (file in predictor_files) {
 dates <- seq(as.Date("1963-01-01"), by=1, len = n)
 
 # Create a matrix with both of the response variables
-tmaxFortHood <- read.table("data/forthood/forthood_obs/tmaxFortHood.dat")
-colnames(tmaxFortHood) <- "tmaxFortHood"
+tmaxFortHood <- read.table("/home/lee/Dropbox/work/ncar/data/forthood/forthood_obs/tmaxFortHood.dat")
+precFortHood <- read.table("/home/lee/Dropbox/work/ncar/data/forthood/forthood_obs/precFortHood.dat")
+colnames(tmaxFortHood) <- "tmax"
+colnames(precFortHood) <- "prec"
 tmaxMatrix <- cbind(dates, tmaxFortHood, predictor_matrix)
 tmaxMatrix_notemp <- tmaxMatrix[,-c(grep("Temperature", colnames(tmaxMatrix)))]
-rm(tmaxFortHood, dates, file_lookup, predictor_matrix)
+fort_hood <- cbind(dates, predictor_matrix, tmaxFortHood, precFortHood)
+rm(tmaxFortHood, precFortHood, dates, file_lookup, predictor_matrix)
+
 
 # Generate a table of most predictive covariates per month
 var_list <- c("dates", "500mbDivergence_lag", "500mbMeridionalWind_lag", "700mbDivergence_lag",
               "700mbMeridionalWind_lag", "850mbDivergence_lag", "850mbMeridionalWind_lag",
               "tmaxFortHood")
-diags <- generate_table("outputs/images/tmax_forthood", tmaxMatrix[,var_list], tmaxFortHood)
+
+diags <- generate_table("misc-code/tmax_forthood", fort_hood, prec, conditional = TRUE, conditional_step = 2)
 
 
 

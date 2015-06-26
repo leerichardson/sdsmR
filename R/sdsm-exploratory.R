@@ -57,10 +57,10 @@ compute_error <- function(predictions, observations, type = "regression"){
     }
 }
 
-split_dataframe <- function(dataframe, percentage=.6){
-    split_num <- floor(nrow(dataframe)*.6)
-    train  <- dataframe[1:split_num,]
-    test <- dataframe[(split_num+1):nrow(dataframe),]
+split_dataframe <- function(dataframe, percentage = .6){
+    split_num <- floor(nrow(dataframe) * percentage)
+    train  <- dataframe[1:split_num, ]
+    test <- dataframe[(split_num+1):nrow(dataframe), ]
     return(list(train = train, test = test))
 }
 
@@ -73,22 +73,62 @@ split_dataframe <- function(dataframe, percentage=.6){
 #'
 #' @export
 #'
-#' @param plotname The filepath in which you want to save t
+#' @param plotname The name you want to save the plots as. IE:
+#' if your data comes from the blogsville data-set, you might
+#' want to call this "blogsville". If you want to save the plot
+#' in a different directory, just specify this in this name:
+#' "/home/blogsville" will
 #' @param dataframe a dataframe object which contains a column
 #' of dates, the predictand (response) variable, as well as the
-#' predictor variablesto explore.
+#' predictor variables.
 #' @param y The predictand (response) variable name from the
-#' same dataframe
+#' same dataframe.
+#' @param conditional Whether you want the correlations to correspond
+#' to the conditional model. If TRUE, then the function will return
+#' correlations for the repsonse variable, which aspect of the conditional
+#' model it will return is determined by the conditional_step parameter.
+#' @param conditional_step Determines whether the first or second step of
+#' the conditional model is returned. If 1, then this will return the
+#' correlations with the 0/1 reponse variable. If 2, then the tables
+#' will correspond to the orinal repsonse variable, but only on the
+#' days in which the variable is a 1.
 #' @return A correlation matrix between predictor variables and
 #' two PDF file diagnostic plots.
-generate_table <- function(plotname, dataframe, y){
+generate_table <- function(plotname, dataframe, y, conditional = FALSE,
+                     conditional_step = 1) {
+
+    # Convert the response variable to a character string
+    # if it was input to the function as a different class.
+    test <- try(class(y))
+    if (class(test) != "character") {
+        response_name <- deparse(substitute(y))
+    } else {
+        response_name <- y
+    }
+
+    # Based on whether or not the model is conditional or unconditional,
+    # subset the dataframe accordingly. IE: if it's
+    if (conditional == TRUE) {
+        print("Generating table for Conditional Model")
+        dataframe$cond <- ifelse(dataframe[, response_name] > 0, 1, 0)
+        if (conditional_step == 1) {
+            dataframe <- dataframe[, !names(dataframe) %in% c(response_name)]
+            response_name <- "cond"
+        } else if (conditional_step == 2) {
+            dataframe <- subset(dataframe, cond == 1)
+            dataframe <- dataframe[, !names(dataframe) %in% c("cond")]
+        } else {
+            stop("Conditional Step must be either 1 or 2")
+        }
+    } else if (conditional == FALSE) {
+        print("Generating table for Unconditional Model")
+    }
 
     # Get the initital information such as number of predictors and data-points
     times <- c("january", "february", "march", "april", "may", "june", "july",
                "august", "september", "october", "november", "december", "annual")
-    num_obs <- dim(dataframe)[1]
-    num_vars <- dim(dataframe)[2]
-    response_name <- deparse(substitute(y))
+    num_obs <- nrow(dataframe)
+    num_vars <- ncol(dataframe)
 
     # Create a matrix to store the results in and
     # name the columns and rows to represent the variables and times
@@ -96,7 +136,7 @@ generate_table <- function(plotname, dataframe, y){
     colnames(results) <- times
     rownames(results) <- names(dataframe)
 
-    png(paste0(plotname, "_cor_matrices.pdf"), height = 15, width=15)
+    pdf(paste0(plotname, "_cor_matrices.pdf"), height = 15, width=15)
     par(oma=c(1,1,5,1))
     for (i in 1:length(times)) {
         # Subset the initial dataframe based on the month
@@ -114,6 +154,7 @@ generate_table <- function(plotname, dataframe, y){
         subset_df <- subset_df[complete.cases(subset_df), ]
 
         # Get the correlation matrix for the top 30ish variables
+        browser()
         tmp <- cor(subset_df[,!names(subset_df) %in% c("dates")], use = "complete")
         top_vars <- order(abs(as.vector(tmp[,response_name])), decreasing=TRUE)
         if (length(top_vars) < 15) {
@@ -128,8 +169,8 @@ generate_table <- function(plotname, dataframe, y){
 
 
         for (j in 1:num_vars) {
-            ## Skip if we are either going through the response variable or
-            ## the dates column
+            # Skip if we are either going through the response variable or
+            # the dates column
             if (class(subset_df[,j]) != "numeric") {
                 next
             }
@@ -153,7 +194,7 @@ generate_table <- function(plotname, dataframe, y){
     ## Create a PDF of the dataframe
     maxrow = 15;
     npages = ceiling(nrow(results)/maxrow);
-    png(paste0(plotname, "_cor_explained.pdf"), height = 15, width=15)
+    pdf(paste0(plotname, "_cor_explained.pdf"), height = 15, width=15)
 
     ## Get the correct index of the matrix for a specific page of the PDF
     for(i in 1:npages){
@@ -171,3 +212,4 @@ generate_table <- function(plotname, dataframe, y){
     ## Return the correlation matrix
     return(results)
 }
+

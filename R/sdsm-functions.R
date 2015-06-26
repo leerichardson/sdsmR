@@ -1,3 +1,33 @@
+add_month <- function(dataframe, date_column) {
+
+}
+
+
+#' Build a Linear Regression for Statistical Downscaling
+#'
+#' This function is meant to replicate the calibrate model
+#' section of the SDSM tool. It will date in a dataframe, the response
+#' variable, the dates column, as well as other specific modeling
+#' oprions. As an output, calibrate_model with generate a list
+#' with appropriate number of linear models. The reason it outputs
+#' a list of models, rather than just one, is for consistency when
+#' the "monthly" or "seasonal" option is chosen, which will fit 4 or 12
+#' seperate models to the dataframe.
+#'
+#' @export
+#'
+#' @param dataframe a dataframe object which contains the data
+#' you are fitting the model with
+#' @param y the repsonse variable.
+#' @param date_column A column which contains the dates. Should be
+#' of the class Date in R to work
+#' @param model_type "annual", "monthly", or "seasonal". The default
+#' used is "annual"
+#' @param autoregression Whether or not to include an autoregressive term
+#' in the model
+#' @param process Either conditional or unconditional
+#' @return A list of either one, four, or twelve linear models, with
+#' the length of the list determined by the model_type parameter.
 calibrate_model <- function(dataframe, y, date_column, model_type = "annual",
                             autoregression = "false", process = "unconditional") {
 
@@ -93,6 +123,16 @@ calibrate_model <- function(dataframe, y, date_column, model_type = "annual",
     return(models)
 }
 
+#' Obtain summary statistics for calibrated models
+#'
+#' This function is meant to be used after running the calibrate_models
+#' function.
+#'
+#' @export
+#'
+#' @param model_list A list build with the calibrate_model function
+#' @return A list of summary statistics for the corresponding models
+#' fitted with the calibrate_models function
 summarize_models <- function(model_list) {
     # Apply the lapply summary functions
     # to this model in order to return the
@@ -110,4 +150,31 @@ summarize_models <- function(model_list) {
                         )
 
 }
+
+#' Make predictions using calibrated models and a new data frame
+#'
+#' This function is meant to be used after running the calibrate_models
+#' function.
+#'
+#' @export
+#'
+#' @param model_list
+#' @return A list of summary statistics for the corresponding models
+#' fitted with the calibrate_models function
+generate_weather <- function(models, new_dataframe) {
+
+    # Determine how many models in the list
+    num_mods <- length(models)
+
+    # Pull out the seasonal/monthly aspects of the data
+    # frame if they're not already included
+
+
+    # Loop through each of the different aspect of
+    # the test data corresponding to the models
+
+
+
+}
+
 
