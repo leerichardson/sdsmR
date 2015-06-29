@@ -14,7 +14,7 @@ on whether the model is annual, seasonal, or monthly.}
 \item{new_dataframe}{A new dataframe in which predictions are to
 be made from the calibrated models.}
 
-\item{uncertainty}{Either "ensembles" or "intervals".}
+\item{uncertainty}{Either "ensemble" or "interval".}
 
 \item{num_ensembles}{If uncertainty = "ensembles", then this specifies
 how many ensembles to return. Default is set to one.}

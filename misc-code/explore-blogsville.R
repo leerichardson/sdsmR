@@ -15,9 +15,9 @@ colnames(tmax_predictand) <- "tmax"
 colnames(pcrp_predictand) <- "pcrp"
 dates <- seq(as.Date("1960-01-01"), by=1, len = 10957)
 blogsville <- cbind(dates, blogsville_predictors, tmax_predictand, pcrp_predictand)
+save(blogsville, file = "data/blogsville.rda")
 
-
-# Split the dataset into training and testing
+    # Split the dataset into training and testing
 middle <- floor(nrow(blogsville)/2) + 1
 train <- blogsville[1:middle,]
 test <- blogsville[(middle+1):nrow(blogsville),]
@@ -42,12 +42,22 @@ lines(test[,"dates"], prediction_results[,2], col="red")
 # SCENARIO GENERATOR ------------------------------
 
 # Read in the GCM MODEL output from both time period's and build the covariate matrices
-gcm_file_names <- list.files("data/blogsville/gcmx1961-90/")
-s1_files <- paste0("data/blogsville/gcmx1961-90/", gcm_file_names)
-s2_files <- paste0("data/blogsville/gcmx2070-99/", gcm_file_names)
-s1_predictors <- combine_predictors(s1_files, var_names = predictor_names)
-s2_predictors <- combine_predictors(s2_files, var_names = predictor_names)
-game
+gcm_file_names <- list.files("/home/lee/Dropbox/work/ncar/data/blogsville/gcmx1961-90/")
+s1_files <- paste0("/home/lee/Dropbox/work/ncar/data/blogsville/gcmx1961-90/", gcm_file_names)
+s2_files <- paste0("/home/lee/Dropbox/work/ncar/data/blogsville/gcmx2070-99/", gcm_file_names)
+
+weather_1960 <- combine_predictors(s1_files, var_names = predictor_names)
+dates <-  seq(as.Date("1960-01-01"), by=1, len= nrow(weather_1960))
+weather_1960 <- cbind(dates, weather_1960)
+
+weather_2070 <- combine_predictors(s2_files, var_names = predictor_names)
+dates <-  seq(as.Date("2070-01-01"), by=1, len = nrow(weather_2070))
+weather_2070 <- cbind(dates, weather_2070)
+
+save(weather_1960, file = "data/weather_1960.rda")
+save(weather_2070, file = "data/weather_2070.rda")
+
+
 # Generate the Scenario 1960-1990
 preds_s1 <- predict.lm(blogsville_model, s1_predictors[,c("uxx", "vxx", "zxx", "xx500", "humxx")])
 s1_dates <-  seq(as.Date("1960-01-01"), by=1, len=length(preds_s1))

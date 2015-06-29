@@ -1,4 +1,4 @@
-    ---
+---
 title: "Statistical Downscaling in R- Blogsville Example"
 author: "Lee Richardson"
 date: "`r Sys.Date()`"
@@ -11,7 +11,7 @@ vignette: >
 
 
 ```{r, echo = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.height = 7, fig.width = 7)
 ```
 
 # Introduction
@@ -182,7 +182,7 @@ Above is a way to compute a seperate linear model for either each month, or each
 An alternative to using the code above to store linear models would be the calibrate_model function, which comes with the sdsmR package. It works the same way as above, storing each model in a list. Notice how the output of this model is similar to the way we calibrated the model above, and we can pull this informartion out with the summarize models function
 
 ```{r}
-blogsville_mod <- calibrate_model(train, tmax, date_column = dates, model_type = "annual")
+blogsville_mod <- calibrate_model(train, "tmax", model_type = "annual")
 blogsville_summary <- summarize_models(blogsville_mod)
 print(blogsville_summary)
 ```
@@ -192,36 +192,124 @@ Now that the have our models built, we will show how to produce the equivalent o
 
 SDSM adds white noise, ie: a normal random variable, onto all of its predictions in order to create ensembles of weather predictions. The reasoning behind generaing these ensembles is to closer match the variance of the observed and downscaled distributions. Next, we will show how to generate these ensembles manually using our annual model, and then show how to use the generate_weather function which comes with the sdsmR packge to perform the same calculations.  
 
-```{r}
+```{r, fig.cap= "testing", fig.height = 7, fig.width = 7}
 # Use the predict.lm function in R with our annual model, 
 # along with the test data. This will output a numeric 
 # vector of predictions for each observation in the test dataset. 
 # Note that if we don't provide new data, the default is that 
 # predict.lm will return the fitted values for this model. 
-weather <- predict.lm(blogsville_mod, newdata = test)
+weather <- predict.lm(blogsville_mod$annual, newdata = test)
 
 # Add a normal random variable to the predictions based 
-# on how many 
+# on how many ensembles are desired. The paramaters for the normal 
+# random variable are mean 0, and standard error equivalent to 
+# the standard error from the linear model. 
+# In this case, we will create 20 different ensembles, 
+# the default in SDSM. 
+num_ensembles <- 20
+num_predictions <- nrow(test)
+sigma <- blogsville_summary$annual$standard.error
+white_noise <- matrix(rnorm(num_predictions * num_ensembles, 
+                    mean = 0, sd = sigma), ncol = num_ensembles)
+ensembles <- white_noise + weather 
+head(ensembles[, 1:6])
+``` 
 
+Similar to the other sections, we have created an R function, 
+called generate_weather, which mimics the functionality of the above 
+code chunk for all models you can generate with calibrate_model. 
+With this function, you can use the output from the 
+calibrate_model function and a new dataframe as inputs,  
+and you will recieve a dataframe with the dates, exact predictions, 
+and specified number of ensembles. 
+
+```{r} 
+blogsville_preds <- generate_weather(models = blogsville_mod, new_dataframe = test, 
+                        uncertainty = "ensemble", num_ensembles = 20)
+head(blogsville_preds[, 1:6])
 ```
 
 
-
-
 ## Prediction Intervals 
+Next, we will show a different way of quantifying uncertainty in our downscaled predictions. Instead of adding random noise to the pointwise prediction generated from the calibrated model, we use a prediction interval, which comes straight from the regression equation. The reason to choose the interval approach instead of the ensembles is that it gives coverage guarantees: IE: approximately 95 percent of the prediction intervals will contain the true value. 
+In the following section, we show the R code which generates both the predictions and corresponding prediction intervals. Note that the actual predictions are the same whether you're generating predictions intervals or using ensembles (check this with `all.equal(as.numeric(weather), blogsville_preds$predictions)`), but what is different is how we are quantifying the uncertainty. 
 
+```{r}
+# Specify the interval = "prediction" option in predict.lm to 
+# obtain prediction intervals for this new dataset. Then, 
+# combine these intervals with the true observations. 
+observed <- test[, "tmax"]
+weather_intervals = predict.lm(blogsville_mod$annual, newdata = test, 
+                        interval = "prediction")
+prediction_results <- cbind(observed, weather_intervals)
 
+# This just demonstrates which percentage of observations our 
+# intervals are trapping. The number is very close to  95%. Note 
+# that one of the observations in the blogsville data-set is an NA, 
+# which is why we need to use the na.rm = TRUE command in the sum. 
+upper <- prediction_results[, "upr"]
+lower <- prediction_results[, "lwr"]
+trapped <- (observed < upper) & (observed > lower) 
+sum(trapped, na.rm = TRUE)/length(trapped)
+```
 
+Finally, let's look at what the two methods for generating uncertainty look like against one another, for the year 1975 in the Blogsville dataset. 
+
+```{r}
+# Ensembles -------------------
+cols <- rainbow(20)
+plot(test$dates[1:365], weather[1:365], type = "l", 
+     ylim = c(0, 35), lwd = 3, 
+     main = "Predicted vs. Observed Weather 1975 in Blogsville", 
+     xlab = "Date", ylab = "Maximum temperature")
+for (i in 1:20) {
+    lines(test$dates[1:365], ensembles[1:365, i], 
+         col = cols[i], lwd = .2)
+}
+points(test$dates[1:365], test[1:365, "tmax"], cex = 1, 
+       col = "black", pch = 16)
+
+# Prediction Intervals --------------
+plot(test$dates[1:365], prediction_results[1:365, 2], 
+     type = "l", lwd = 3, ylim = c(0, 35), col = "red" , 
+     main = "Prediction Intervals 1975 in Blogsville", 
+     xlab = "Date", ylab = "Maximum temperature")
+lines(test$dates[1:365], prediction_results[1:365, 3], 
+      col = "purple", lwd = 2) 
+lines(test$dates[1:365], prediction_results[1:365, 4], 
+      col = "purple", lwd = 2)
+points(test$dates[1:365], test[1:365, "tmax"], cex = 1, 
+       col = "black", pch = 16)
+```
+
+As we can see, both options do a fairly good job giving a range of weather to expect in observations not used by the training dataset. However, we do notice that niether does a great job capturing the extremely hot days, which occur around the middle of July. 
 
 # Scenario Generation 
+Finally, we arrive at the main section where we use GCM output to downscale local variables. In this case, we are using predictors from the HadCM3 experiment, which are the same one's that were included in the Blogsville SDSM manual. 
+Note that this process of generating scenario's from climate model scenario's is statistically the same as the generating weather function we used in the previous section. Howeve
+r, instead of using a test set of the NCEP data, we are using climate model output. Because of this, we can use the same generate_weather function to generate these different scenario's. The input requirements are that you must have a dataframe with the same predictor variable names that were used in the model calibration stage. 
+Below we will generate the scenario's from both 1961-1990 and 2070-2099, along with thir corresponding uncertainty. We will show that, as expected from climate change, the maximum temperatures are expected to be higher in Blogsville in 2070-2099 compard with 1961-1990. Note that similar to the blogsville data, the climate model output comes with the sdsmR package, so we can just load it into R's workspace automatically. 
 
 
+```{r}
+# Load in the climate model output for the two time periods. Recall
+# this comes pre-insalled with the sdsmR package. 
+data(weather_1960)
+data(weather_2070)
 
+
+```
 
 # Conditional Models 
+
+
 
 
 # Summary 
 
 
+
+
 # Supplement: Loading Data
+
+

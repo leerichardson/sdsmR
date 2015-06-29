@@ -214,7 +214,7 @@ summarize_models <- function(model_list) {
 #' on whether the model is annual, seasonal, or monthly.
 #' @param new_dataframe A new dataframe in which predictions are to
 #' be made from the calibrated models.
-#' @param uncertainty Either "ensembles" or "intervals".
+#' @param uncertainty Either "ensemble" or "interval".
 #' @param num_ensembles If uncertainty = "ensembles", then this specifies
 #' how many ensembles to return. Default is set to one.
 #' @return A two column dataframe with dates and predicted weather. The dataframe
