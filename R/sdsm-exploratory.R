@@ -100,7 +100,7 @@ generate_table <- function(plotname, dataframe, y, conditional = FALSE,
     # Convert the response variable to a character string
     # if it was input to the function as a different class.
     test <- try(class(y))
-    if (class(test) != "character") {
+    if (class(test) != "character" & test != "data.frame") {
         response_name <- deparse(substitute(y))
     } else {
         response_name <- y
@@ -154,7 +154,6 @@ generate_table <- function(plotname, dataframe, y, conditional = FALSE,
         subset_df <- subset_df[complete.cases(subset_df), ]
 
         # Get the correlation matrix for the top 30ish variables
-        browser()
         tmp <- cor(subset_df[,!names(subset_df) %in% c("dates")], use = "complete")
         top_vars <- order(abs(as.vector(tmp[,response_name])), decreasing=TRUE)
         if (length(top_vars) < 15) {

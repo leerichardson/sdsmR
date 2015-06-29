@@ -1,4 +1,4 @@
----
+    ---
 title: "Statistical Downscaling in R- Blogsville Example"
 author: "Lee Richardson"
 date: "`r Sys.Date()`"
@@ -100,7 +100,7 @@ First, we will show how to fit a annual model using the blogsville example, and 
 # manual which splits the data into 1960-75 and 1976-90 
 # time periods
 train <- blogsville[1:5478, ]
-test <- blogsville[1:10957, ]
+test <- blogsville[5479:10957, ]
 
 # Fit a linear model to the tmax predictand using all of the 
 # predictor variables from blogsville. Note that we are using the 
@@ -178,8 +178,7 @@ print(season_r2)
 
 Above is a way to compute a seperate linear model for either each month, or each season. Note that we have stored these models inside a list, which is one of R's fundamental data structures. To access one of these models, simply type `season_mods$winter` or `month_mods[[1]]`, and to view a summary of one of these models, type `summary(season_mods$winter)`. 
 
-An alternative to using the code above to store linear models would be the calibrate_model function, which comes with the sdsmR package. It works the same way as above, storing each model in a list. Notice how the output of this model is similar to the way we calibrated the model above, and we can pull this informartion out with the summarize models function:
-
+An alternative to using the code above to store linear models would be the calibrate_model function, which comes with the sdsmR package. It works the same way as above, storing each model in a list. Notice how the output of this model is similar to the way we calibrated the model above, and we can pull this informartion out with the summarize models function
 
 ```{r}
 blogsville_mod <- calibrate_model(train, tmax, date_column = dates, model_type = "annual")
@@ -187,13 +186,13 @@ blogsville_summary <- summarize_models(blogsville_mod)
 print(blogsville_summary)
 ```
 
-# Weather Generator
+# Weather Generator 
 Now that the have our models build, we will show how to produce the equivalent of the weather generator section of the SDSM tool. Generally, this section is used to verify calibrated models, so we will use our testing data-set defined above to generate the local weather and see how well the model performs. Recall that we split the blogsville data-set into a training and testing halves, the first form 1960-1975, and the second from 1976-1990. We build our model using the training portion, and we will now evaluate our model using the test set. 
 
 SDSM adds white noise, ie: a normal random variable, onto all of its predictions in order to create ensembles of weather predictions. The reasoning behind generaing these ensembles is to closer match the variance of the observed and downscaled distributions. Next, we will show how to generate these ensembles manually, and reveal a function which does his automatically. 
 
 ```{r}
-
+generate_weather(blogsville_mod)
 ```
 
 

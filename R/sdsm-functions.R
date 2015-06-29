@@ -1,7 +1,38 @@
-add_month <- function(dataframe, date_column) {
-
+# Function to add a month onto a dataframe
+add_month <- function(dataframe) {
+    classes <- unlist(lapply(dataframe, class))
+    date_column_index <- as.numeric(which(classes == "Date"))
+    dataframe$month <- as.numeric(format.Date(dataframe[, date_column_index], "%m"))
+    return(dataframe)
 }
 
+# Function to add a season onto a dataframe, given a month
+# column
+add_season <- function(dataframe, month_column) {
+
+    # Determine the column with the month variable
+    test <- try(class(month_column))
+    if (class(test) != "character" & test != "data.frame") {
+        month_column_name <- deparse(substitute(month_column))
+    } else {
+        month_column_name <- month_column
+    }
+
+    # Based on the month column, add the season variable to the dataframe
+    season <- rep(NA, nrow(dataframe))
+    season[dataframe$month %in% c(12, 1, 2)] <- "winter"
+    season[dataframe$month %in% c(3, 4, 5)] <- "spring"
+    season[dataframe$month %in% c(6, 7, 8)] <- "summer"
+    season[dataframe$month %in% c(9, 10, 11)] <- "fall"
+    dataframe$season <- season
+
+    # Make sure all of the columns have a season
+    if (sum(is.na(dataframe$season)) > 0) {
+        stop("Some months to not have a season!")
+    }
+
+    return(dataframe)
+}
 
 #' Build a Linear Regression for Statistical Downscaling
 #'
@@ -30,6 +61,16 @@ add_month <- function(dataframe, date_column) {
 #' the length of the list determined by the model_type parameter.
 calibrate_model <- function(dataframe, y, date_column, model_type = "annual",
                             autoregression = "false", process = "unconditional") {
+
+    # Change the response name input into a character vector to be
+    # used later on when indexing the
+    test <- try(class(y))
+    if (class(test) != "character" & test != "data.frame") {
+        response_name <- deparse(substitute(y))
+    } else {
+        response_name <- response_name
+    }
+
 
     # Grab the date column and response variable column names from the inputs.
     # These will be used later on in various convinient ways.
@@ -154,27 +195,91 @@ summarize_models <- function(model_list) {
 #' Make predictions using calibrated models and a new data frame
 #'
 #' This function is meant to be used after running the calibrate_models
-#' function.
+#' function. The idea is that it checks the model type, and then works
+#' through the different subsets of the new dataframe to make predictions,
+#' and returnsn
 #'
 #' @export
 #'
-#' @param model_list
-#' @return A list of summary statistics for the corresponding models
-#' fitted with the calibrate_models function
-generate_weather <- function(models, new_dataframe) {
+#' @param model_list A list containing either 1, 4, or 12 models depending
+#' on whether the model is annual, seasonal, or monthly.
+#' @param new_dataframe A new dataframe in which predictions are to
+#' be made from the calibrated models.
+#' @return A two column dataframe with dates and predicted weather. The dataframe
+#' is ordered chronologically from the dates column.
+generate_weather <- function(models, new_dataframe,
+                             uncertainty = "ensemble", num_ensembles = 1) {
 
     # Determine how many models in the list
     num_mods <- length(models)
 
+    # Pull out which column is the date class
+    classes <- unlist(lapply(new_dataframe, class))
+    date_column_index <- as.numeric(which(classes == "Date"))
+    if (length(date_column_index) == 0) {
+        stop("Need a column of the Date Class")
+    }
+
     # Pull out the seasonal/monthly aspects of the data
     # frame if they're not already included
+    (dates <- structure(rep(NA_real_, 0 ), class="Date"))
+    preds <- vector(mode = "numeric", length = 0)
+    if (num_mods == 12) {
+        new_dataframe <- add_month(new_dataframe)
+        for (i in names(models)) {
+            sub_month <- subset(new_dataframe, month == which(names(models) == i))
+            sub_preds <- predict.lm(models[[i]], newdata = sub_month)
+            preds <- c(preds, sub_preds)
+            dates <- c(dates, sub_month[, date_column_index])
+        }
+    }
+    else if (num_mods == 4) {
+        new_dataframe <- add_month(new_dataframe)
+        new_dataframe <- add_season(new_dataframe, "month")
+        for (i in names(models)) {
+            sub_season <- subset(new_dataframe, season == i)
+            sub_preds <- predict.lm(models[[i]], newdata = sub_season)
+            preds <- c(preds, sub_preds)
+            dates <- c(dates, sub_season[, date_column_index])
+        }
+    } else if (num_mods == 1) {
+        preds <- predict.lm(models[[1]], newdata = new_dataframe)
+        dates <- c(dates, new_dataframe[, date_column_index])
+    } else {
+        stop("List must contain 1, 4, or 12 models!")
+    }
 
+    # Return a dataframe ordered by the datesused
+    final_df <- data.frame(dates = dates, predictions = preds)
+    order_by_date <- order(final_df[, "dates"])
 
-    # Loop through each of the different aspect of
-    # the test data corresponding to the models
+    # Based on the uncertainty, either return just the predictions,
+    # or the number of desired ensembles.
+    # TODO: ADD prediction interval option!
+    browser()
+    if (uncertainty == "ensemble" & num_ensembles == 1) {
+        return(final_df[order_by_date,])
+    } else if (uncertainty == "ensemble" & num_ensembles > 1) {
+        average_sigma <- mean(unlist(lapply(models,
+                                        function(x) summary(x)$sigma)))
+        ensembles <- generate_ensembles(final_df$predictions,
+                        num_ensembles, sigma = mean(average_sigma))
+    }
+}
 
-
-
+# Function to generate ensembles for various predictions made with
+# the generate_weather function
+generate_ensembles <- function(predictions, num_ensembles, sigma){
+    browser()
+    # Get the number of predicted values from the input, and use this
+    # along with the number of ensembles to create a white noise
+    # matrix. The white noise matrix uses the average standard
+    # error over all linear models used in the prediction.
+    num_preds <- length(predictions)
+    white_noise <- matrix(rnorm(num_preds * num_ensembles, mean = 0,
+                                sd = sigma), ncol = num_ensembles)
+    ensemble_matrix <- white_noise + predictions
+    return(ensemble_matrix)
 }
 
 
