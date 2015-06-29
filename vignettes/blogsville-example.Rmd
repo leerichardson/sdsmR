@@ -182,7 +182,12 @@ Above is a way to compute a seperate linear model for either each month, or each
 An alternative to using the code above to store linear models would be the calibrate_model function, which comes with the sdsmR package. It works the same way as above, storing each model in a list. Notice how the output of this model is similar to the way we calibrated the model above, and we can pull this informartion out with the summarize models function
 
 ```{r}
-blogsville_mod <- calibrate_model(train, "tmax", model_type = "annual")
+# Fit a blogsville model using the calibrate model function. Note that 
+# the -which(colnames(test) == "pcrp") command is just making sure 
+# that we are not using precipitation as a predictor for maximum 
+# temperature. 
+blogsville_mod <- calibrate_model(train[, -which(colnames(train) == "pcrp")], 
+                        y = "tmax", model_type = "annual")
 blogsville_summary <- summarize_models(blogsville_mod)
 print(blogsville_summary)
 ```
@@ -198,7 +203,8 @@ SDSM adds white noise, ie: a normal random variable, onto all of its predictions
 # vector of predictions for each observation in the test dataset. 
 # Note that if we don't provide new data, the default is that 
 # predict.lm will return the fitted values for this model. 
-weather <- predict.lm(blogsville_mod$annual, newdata = test)
+weather <- predict.lm(blogsville_mod$annual, 
+                newdata = test[, -which(colnames(test) == "pcrp")])
 
 # Add a normal random variable to the predictions based 
 # on how many ensembles are desired. The paramaters for the normal 
@@ -224,7 +230,8 @@ and you will recieve a dataframe with the dates, exact predictions,
 and specified number of ensembles. 
 
 ```{r} 
-blogsville_preds <- generate_weather(models = blogsville_mod, new_dataframe = test, 
+blogsville_preds <- generate_weather(models = blogsville_mod, 
+                        new_dataframe = test[, -which(colnames(test) == "pcrp")], 
                         uncertainty = "ensemble", num_ensembles = 20)
 head(blogsville_preds[, 1:6])
 ```
@@ -239,7 +246,8 @@ In the following section, we show the R code which generates both the prediction
 # obtain prediction intervals for this new dataset. Then, 
 # combine these intervals with the true observations. 
 observed <- test[, "tmax"]
-weather_intervals = predict.lm(blogsville_mod$annual, newdata = test, 
+weather_intervals = predict.lm(blogsville_mod$annual, 
+                        newdata = test[, -which(colnames(test) == "pcrp")], 
                         interval = "prediction")
 prediction_results <- cbind(observed, weather_intervals)
 
@@ -297,6 +305,12 @@ Below we will generate the scenario's from both 1961-1990 and 2070-2099, along w
 data(weather_1960)
 data(weather_2070)
 
+# Generate the wetaher using the Blogsville monthly model. 
+# Note that we are using the monthly model for weather demonstration 
+# since it 
+blogsville_monthly_mod <- calibrate_model(train[, -which(colnames(train) == "pcrp")], 
+                                y = "tmax", model_type = "monthly")
+preds_1960 <- generate_weather(blogsville_monthly_mod, new_dataframe = weather_1960)
 
 ```
 
