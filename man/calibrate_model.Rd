@@ -4,17 +4,14 @@
 \alias{calibrate_model}
 \title{Build a Linear Regression for Statistical Downscaling}
 \usage{
-calibrate_model(dataframe, y, date_column, model_type = "annual",
-  autoregression = "false", process = "unconditional")
+calibrate_model(dataframe, y, model_type = "annual",
+  autoregression = "false", process = "unconditional", date_column = NULL)
 }
 \arguments{
 \item{dataframe}{a dataframe object which contains the data
 you are fitting the model with}
 
-\item{y}{the repsonse variable.}
-
-\item{date_column}{A column which contains the dates. Should be
-of the class Date in R to work}
+\item{y}{the repsonse variable. Input must be a character vector}
 
 \item{model_type}{"annual", "monthly", or "seasonal". The default
 used is "annual"}
@@ -23,6 +20,9 @@ used is "annual"}
 in the model}
 
 \item{process}{Either conditional or unconditional}
+
+\item{date_column}{Column which contains the dates. Should be
+of the class Date in R to work, input must be a character!}
 }
 \value{
 A list of either one, four, or twelve linear models, with

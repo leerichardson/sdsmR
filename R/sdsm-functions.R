@@ -49,33 +49,41 @@ add_season <- function(dataframe, month_column) {
 #'
 #' @param dataframe a dataframe object which contains the data
 #' you are fitting the model with
-#' @param y the repsonse variable.
-#' @param date_column A column which contains the dates. Should be
-#' of the class Date in R to work
+#' @param y the repsonse variable. Input must be a character vector
 #' @param model_type "annual", "monthly", or "seasonal". The default
 #' used is "annual"
 #' @param autoregression Whether or not to include an autoregressive term
 #' in the model
 #' @param process Either conditional or unconditional
+#' @param date_column Column which contains the dates. Should be
+#' of the class Date in R to work, input must be a character!
 #' @return A list of either one, four, or twelve linear models, with
 #' the length of the list determined by the model_type parameter.
-calibrate_model <- function(dataframe, y, date_column, model_type = "annual",
-                            autoregression = "false", process = "unconditional") {
+calibrate_model <- function(dataframe, y, model_type = "annual",
+                            autoregression = "false", process = "unconditional",
+                            date_column = NULL) {
 
     # Change the response name input into a character vector to be
     # used later on when indexing the
-    test <- try(class(y))
-    if (class(test) != "character" & test != "data.frame") {
-        response_name <- deparse(substitute(y))
+    if (!exists("y")) {
+        stop("Must specify the response (y) variable")
+    } else if (class(y) != "character") {
+        stop("Response variable (y) must be a character (string)")
     } else {
-        response_name <- response_name
+        response_name <- y
     }
 
 
     # Grab the date column and response variable column names from the inputs.
-    # These will be used later on in various convinient ways.
-    response_name <- deparse(substitute(y))
-    date_column_name <- deparse(substitute(date_column))
+    # These will be used later in various convinient ways, such as indexing the
+    # dataframe when needed.
+    if (!is.null(date_column)) {
+        date_column_name <- date_column
+    } else {
+        classes <- unlist(lapply(dataframe, class))
+        date_column_index <- as.numeric(which(classes == "Date"))
+        date_column_name <- colnames(dataframe)[date_column_index]
+    }
 
     # Add in a lagged variable to the regression models if that option
     # has beens specified
@@ -197,14 +205,18 @@ summarize_models <- function(model_list) {
 #' This function is meant to be used after running the calibrate_models
 #' function. The idea is that it checks the model type, and then works
 #' through the different subsets of the new dataframe to make predictions,
-#' and returnsn
+#' and returnsa data frame with dates, and predictions, and ensembles
+#' of predictions if that option has been specified.
 #'
 #' @export
 #'
-#' @param model_list A list containing either 1, 4, or 12 models depending
+#' @param models A list containing either 1, 4, or 12 models depending
 #' on whether the model is annual, seasonal, or monthly.
 #' @param new_dataframe A new dataframe in which predictions are to
 #' be made from the calibrated models.
+#' @param uncertainty Either "ensembles" or "intervals".
+#' @param num_ensembles If uncertainty = "ensembles", then this specifies
+#' how many ensembles to return. Default is set to one.
 #' @return A two column dataframe with dates and predicted weather. The dataframe
 #' is ordered chronologically from the dates column.
 generate_weather <- function(models, new_dataframe,
@@ -255,8 +267,6 @@ generate_weather <- function(models, new_dataframe,
 
     # Based on the uncertainty, either return just the predictions,
     # or the number of desired ensembles.
-    # TODO: ADD prediction interval option!
-    browser()
     if (uncertainty == "ensemble" & num_ensembles == 1) {
         return(final_df[order_by_date,])
     } else if (uncertainty == "ensemble" & num_ensembles > 1) {
@@ -264,13 +274,16 @@ generate_weather <- function(models, new_dataframe,
                                         function(x) summary(x)$sigma)))
         ensembles <- generate_ensembles(final_df$predictions,
                         num_ensembles, sigma = mean(average_sigma))
+        final_with_ensembles <- cbind(final_df, ensembles)
+        colnames(final_with_ensembles)[3:ncol(final_with_ensembles)] <-
+            paste0("ensemble_", 1:num_ensembles)
+        return(final_with_ensembles)
     }
 }
 
 # Function to generate ensembles for various predictions made with
 # the generate_weather function
 generate_ensembles <- function(predictions, num_ensembles, sigma){
-    browser()
     # Get the number of predicted values from the input, and use this
     # along with the number of ensembles to create a white noise
     # matrix. The white noise matrix uses the average standard

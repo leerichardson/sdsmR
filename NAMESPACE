@@ -3,4 +3,5 @@
 export(calibrate_model)
 export(combine_predictors)
 export(generate_table)
+export(generate_weather)
 export(summarize_models)

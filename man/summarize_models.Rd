@@ -7,7 +7,7 @@
 summarize_models(model_list)
 }
 \arguments{
-\item{model_list}{}
+\item{model_list}{A list build with the calibrate_model function}
 }
 \value{
 A list of summary statistics for the corresponding models

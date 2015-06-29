@@ -99,6 +99,7 @@ First, we will show how to fit a annual model using the blogsville example, and 
 # sets. This is the same split used by Wibly in the SDSM
 # manual which splits the data into 1960-75 and 1976-90 
 # time periods
+
 train <- blogsville[1:5478, ]
 test <- blogsville[5479:10957, ]
 
@@ -187,12 +188,21 @@ print(blogsville_summary)
 ```
 
 # Weather Generator 
-Now that the have our models build, we will show how to produce the equivalent of the weather generator section of the SDSM tool. Generally, this section is used to verify calibrated models, so we will use our testing data-set defined above to generate the local weather and see how well the model performs. Recall that we split the blogsville data-set into a training and testing halves, the first form 1960-1975, and the second from 1976-1990. We build our model using the training portion, and we will now evaluate our model using the test set. 
+Now that the have our models built, we will show how to produce the equivalent of the weather generator section of the SDSM tool. Generally, this section is used to verify calibrated models, so we will use our testing data-set defined above to generate the local weather and see how well the model performs. Recall that we split the blogsville data-set into a training and testing halves, the first form 1960-1975, and the second from 1976-1990. We build our model using the training portion, and we will now evaluate our model using the test set. 
 
-SDSM adds white noise, ie: a normal random variable, onto all of its predictions in order to create ensembles of weather predictions. The reasoning behind generaing these ensembles is to closer match the variance of the observed and downscaled distributions. Next, we will show how to generate these ensembles manually, and reveal a function which does his automatically. 
+SDSM adds white noise, ie: a normal random variable, onto all of its predictions in order to create ensembles of weather predictions. The reasoning behind generaing these ensembles is to closer match the variance of the observed and downscaled distributions. Next, we will show how to generate these ensembles manually using our annual model, and then show how to use the generate_weather function which comes with the sdsmR packge to perform the same calculations.  
 
 ```{r}
-generate_weather(blogsville_mod)
+# Use the predict.lm function in R with our annual model, 
+# along with the test data. This will output a numeric 
+# vector of predictions for each observation in the test dataset. 
+# Note that if we don't provide new data, the default is that 
+# predict.lm will return the fitted values for this model. 
+weather <- predict.lm(blogsville_mod, newdata = test)
+
+# Add a normal random variable to the predictions based 
+# on how many 
+
 ```
 
 
@@ -211,8 +221,7 @@ generate_weather(blogsville_mod)
 # Conditional Models 
 
 
+# Summary 
 
 
 # Supplement: Loading Data
-
-s
