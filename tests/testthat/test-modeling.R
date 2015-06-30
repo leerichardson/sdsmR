@@ -1,5 +1,5 @@
 library(stringr)
-context("Modeling Output")
+context("Modeling")
 
 test_that("calibrate models returns a list of the desired number of linear models, based on model type", {
     expect_output(str(calibrate_model(dataframe = blogsville,  y = "tmax", model_type = "annual")),
@@ -8,16 +8,11 @@ test_that("calibrate models returns a list of the desired number of linear model
                   "List of 4")
     expect_output(str(calibrate_model(dataframe = blogsville, y = "tmax", model_type = "monthly")),
                   "List of 12")
+    expect_output(str(calibrate_model(dataframe = blogsville, y = "pcrp", model_type = "monthly",
+                                      process = "conditional")$jan), "List of 2")
+    expect_output(str(calibrate_model(dataframe = blogsville, y = "pcrp", model_type = "seasonal",
+                                      process = "conditional")$winter), "List of 2")
+    expect_output(str(calibrate_model(dataframe = blogsville, y = "pcrp", model_type = "annual",
+                                      process = "conditional")$annual), "List of 2")
     }
 )
-
-# test_that("generate weather returns the correct size dataframe", {
-#         blogsville_mod <- calibrate_model(blogsville, y = "tmax", model_type = "annual")
-#         annual_preds <- generate_weather(blogsville_mod,
-#                              new_dataframe = blogsville, uncertainty = "ensemble",
-#                              num_ensembles = 20 )
-#
-#         expect_output(str(annual_preds),
-#                        "10957 obs. of  9 variables:")
-#      }
-#  )

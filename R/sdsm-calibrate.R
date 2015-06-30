@@ -111,57 +111,84 @@ calibrate_model <- function(dataframe, y, model_type = "annual",
         # Pull out the list of months in the dataframe which we
         # will use to fit each specific monthly linear model. Then, add the month
         # column to the corresponding dataframe to be used in the following loop
-        months <- unique(format.Date(dataframe[, date_column_name], "%m"))
-        dataframe$month <- factor(format.Date(dataframe[, date_column_name], "%m"))
+        dataframe <- add_month(dataframe)
+        months <- unique(dataframe$month)
 
         # Loop through each one of the months and fit a linear model to the
         # corresponding dataframe. Then, store each monthly linear model as an
         # element of a list in which we have created above.
         for (m in months) {
             month_dataframe <- subset(dataframe, month == m)
-            month_lm <- lm(month_dataframe[, response_name] ~ .,
-                data = month_dataframe[,-which(names(month_dataframe) %in% c(response_name, date_column_name, "month"))])
+            exclude_index <- -which(names(month_dataframe) %in% c(response_name, date_column_name, "month"))
+
+            # Based on the process, fit either a conditional or unconditional
+            # model to the data. Store the result of this fitting procedure in a list.
+            # If conditional, there will be a list of two models stored
+            if (process == "unconditional") {
+                month_lm <- lm(month_dataframe[, response_name] ~ .,
+                               data = month_dataframe[, exclude_index])
+            } else if (process == "conditional") {
+                month_lm <- fit_conditional(month_dataframe[, exclude_index],
+                                            month_dataframe[, response_name])
+            } else {
+                stop("process must be conditional or unconditional")
+            }
             models[[as.numeric(m)]] <- month_lm
         }
 
-
-
     } else if (model_type == "seasonal") {
         # Allocate four slots in a list in order to store each of
-            # the four seasonal models
+        # the four seasonal models. Next, use the add month and
+        # add season functions to add on these columns to the
+        # dataframe. Finally, pull the unique season names and
+        # set the names for the list for storing models equal to these
+        # seasons
         models <- vector(mode = "list", length = 4)
-        season_names <- c("winter", "spring", "summer", "fall")
-        names(models) <- season_names
-
-
-        # In order to create the seasonal variable, we must first
-        # create one which represents the months
-        dataframe$month <- factor(format.Date(dataframe[, date_column_name], "%m"))
-
-        # Using the month variable jut created, make another
-        # variable which represents the season. Then, get a list of the
-        # different seasons to use in the loop below
-        dataframe$season <- factor(ifelse(dataframe$month %in% c("12", "01", "02"), season_names[1],
-                                    ifelse(dataframe$month %in% c("03", "04", "05"), season_names[2],
-                                    ifelse(dataframe$month %in% c("06", "07", "08"), season_names[3],
-                                    ifelse(dataframe$month %in% c("09", "10", "11"), season_names[4],  NA)))))
+        dataframe <- add_month(dataframe)
+        dataframe <- add_season(dataframe, "month")
         seasons <- unique(dataframe$season)
+        names(models) <- seasons
 
         # Loop through each one of the months and fit a linear model to the
         # corresponding dataframe. Then, store each monthly linear model as an
         # element of a list in which we have created above.
         for (s in seasons) {
+            # Subset the dataframe to only contain the season we are
+            # interested in, and pull out the indexes we want to exclude from
+            # the modeling
             season_dataframe <- subset(dataframe, season == s)
-            unused_indices <- which(names(season_dataframe) %in% c(response_name, date_column_name, "month", "season"))
-            season_lm <- lm(season_dataframe[, response_name] ~ ., data = season_dataframe[,-unused_indices])
+            exclude_index <- -which(names(season_dataframe) %in% c(response_name, date_column_name, "month", "season"))
+
+            # Fit a linear model based on whether the process is conditional or
+            # unconditional
+            if (process == "unconditional") {
+                season_lm <- lm(season_dataframe[, response_name] ~ .,
+                               data = season_dataframe[, exclude_index])
+            } else if (process == "conditional") {
+                season_lm <- fit_conditional(season_dataframe[, exclude_index],
+                                             season_dataframe[, response_name])
+            } else {
+                stop("process must be conditional or unconditional")
+            }
             models[[as.character(s)]] <- season_lm
         }
 
     } else if (model_type == "annual") {
         models <- vector(mode = "list", length = 1)
         names(models) <- "annual"
-        annual_lm <- lm(dataframe[, response_name] ~ .,
-                        data = dataframe[,-which(names(dataframe) %in% c(response_name, date_column_name))])
+        exclude_index <- -which(names(dataframe) %in% c(response_name, date_column_name))
+
+        # Fit a linear model based on whether the process is conditional or
+        # unconditional
+        if (process == "unconditional") {
+            annual_lm <- lm(dataframe[, response_name] ~ .,
+                            data = dataframe[, exclude_index])
+        } else if (process == "conditional") {
+            annual_lm <- fit_conditional(dataframe[, exclude_index],
+                                         dataframe[, response_name])
+        } else {
+            stop("process must be conditional or unconditional")
+        }
         models[[1]] <- annual_lm
 
     } else {
@@ -188,111 +215,26 @@ summarize_models <- function(model_list) {
     # quantities of interest from the given list of models
     month_summaries <- lapply(model_list,
                               function(x) {
-                                summary <- summary(x)
-                                r_squared <- summary$r.squared
-                                standard_error <- summary$sigma
-                                coefs <- summary$coefficients
-                                return(list(r.squared = r_squared,
-                                            standard.error = standard_error,
-                                            coefficients = coefs))
-                            }
-                        )
+                                  summary <- summary(x)
+                                  r_squared <- summary$r.squared
+                                  standard_error <- summary$sigma
+                                  coefs <- summary$coefficients
+                                  return(list(r.squared = r_squared,
+                                              standard.error = standard_error,
+                                              coefficients = coefs))
+                              }
+    )
 
 }
 
-#' Make predictions using calibrated models and a new data frame
-#'
-#' This function is meant to be used after running the calibrate_models
-#' function. The idea is that it checks the model type, and then works
-#' through the different subsets of the new dataframe to make predictions,
-#' and returnsa data frame with dates, and predictions, and ensembles
-#' of predictions if that option has been specified.
-#'
-#' @export
-#'
-#' @param models A list containing either 1, 4, or 12 models depending
-#' on whether the model is annual, seasonal, or monthly.
-#' @param new_dataframe A new dataframe in which predictions are to
-#' be made from the calibrated models.
-#' @param uncertainty Either "ensemble" or "interval".
-#' @param num_ensembles If uncertainty = "ensembles", then this specifies
-#' how many ensembles to return. Default is set to one.
-#' @return A two column dataframe with dates and predicted weather. The dataframe
-#' is ordered chronologically from the dates column.
-generate_weather <- function(models, new_dataframe,
-                             uncertainty = "ensemble", num_ensembles = 1) {
-
-    # Determine how many models in the list
-    num_mods <- length(models)
-
-    # Pull out which column is the date class
-    classes <- unlist(lapply(new_dataframe, class))
-    date_column_index <- as.numeric(which(classes == "Date"))
-    if (length(date_column_index) == 0) {
-        stop("Need a column of the Date Class")
-    }
-
-    # Pull out the seasonal/monthly aspects of the data
-    # frame if they're not already included
-    (dates <- structure(rep(NA_real_, 0 ), class="Date"))
-    preds <- vector(mode = "numeric", length = 0)
-    if (num_mods == 12) {
-        new_dataframe <- add_month(new_dataframe)
-        for (i in names(models)) {
-            sub_month <- subset(new_dataframe, month == which(names(models) == i))
-            sub_preds <- predict.lm(models[[i]], newdata = sub_month)
-            preds <- c(preds, sub_preds)
-            dates <- c(dates, sub_month[, date_column_index])
-        }
-    }
-    else if (num_mods == 4) {
-        new_dataframe <- add_month(new_dataframe)
-        new_dataframe <- add_season(new_dataframe, "month")
-        for (i in names(models)) {
-            sub_season <- subset(new_dataframe, season == i)
-            sub_preds <- predict.lm(models[[i]], newdata = sub_season)
-            preds <- c(preds, sub_preds)
-            dates <- c(dates, sub_season[, date_column_index])
-        }
-    } else if (num_mods == 1) {
-        preds <- predict.lm(models[[1]], newdata = new_dataframe)
-        dates <- c(dates, new_dataframe[, date_column_index])
-    } else {
-        stop("List must contain 1, 4, or 12 models!")
-    }
-
-    # Return a dataframe ordered by the datesused
-    final_df <- data.frame(dates = dates, predictions = preds)
-    order_by_date <- order(final_df[, "dates"])
-
-    # Based on the uncertainty, either return just the predictions,
-    # or the number of desired ensembles.
-    if (uncertainty == "ensemble" & num_ensembles == 1) {
-        return(final_df[order_by_date,])
-    } else if (uncertainty == "ensemble" & num_ensembles > 1) {
-        average_sigma <- mean(unlist(lapply(models,
-                                        function(x) summary(x)$sigma)))
-        ensembles <- generate_ensembles(final_df$predictions,
-                        num_ensembles, sigma = mean(average_sigma))
-        final_with_ensembles <- cbind(final_df, ensembles)
-        colnames(final_with_ensembles)[3:ncol(final_with_ensembles)] <-
-            paste0("ensemble_", 1:num_ensembles)
-        return(final_with_ensembles)
-    }
+# Function to fit a conditional model. Used in the calibrate_model
+# funtion if the process = "conditional" option is specified.
+fit_conditional <- function(dataframe, cond_var) {
+    dataframe$wetday <- ifelse(cond_var > 0, 1, 0)
+    step1 <- lm(wetday ~ ., data = dataframe)
+    data_subset <- subset(dataframe, wetday == 1)
+    cond_var_subset <- cond_var[cond_var > 0]
+    step2 <- lm(cond_var_subset ~ ., data = data_subset[, -ncol(dataframe)])
+    return(list(step1 = step1, step2 = step2))
 }
-
-# Function to generate ensembles for various predictions made with
-# the generate_weather function
-generate_ensembles <- function(predictions, num_ensembles, sigma){
-    # Get the number of predicted values from the input, and use this
-    # along with the number of ensembles to create a white noise
-    # matrix. The white noise matrix uses the average standard
-    # error over all linear models used in the prediction.
-    num_preds <- length(predictions)
-    white_noise <- matrix(rnorm(num_preds * num_ensembles, mean = 0,
-                                sd = sigma), ncol = num_ensembles)
-    ensemble_matrix <- white_noise + predictions
-    return(ensemble_matrix)
-}
-
 

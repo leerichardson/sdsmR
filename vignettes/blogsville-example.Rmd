@@ -87,6 +87,9 @@ plot(tmax ~ dates, data = blogsville[blogsville$period == 2,],
      cex = .2, col = "red", ylim = c(0, 30))
 plot(tmax ~ dates, data = blogsville[blogsville$period == 3,], 
      cex = .2, col = "red", ylim = c(0, 30))
+
+# Remove the period variable from the blogsville dataframe
+blogsville <- blogsville[, 1:8]
 ```
 
 # Model Calibration
@@ -99,7 +102,6 @@ First, we will show how to fit a annual model using the blogsville example, and 
 # sets. This is the same split used by Wibly in the SDSM
 # manual which splits the data into 1960-75 and 1976-90 
 # time periods
-
 train <- blogsville[1:5478, ]
 test <- blogsville[5479:10957, ]
 
@@ -263,7 +265,7 @@ sum(trapped, na.rm = TRUE)/length(trapped)
 
 Finally, let's look at what the two methods for generating uncertainty look like against one another, for the year 1975 in the Blogsville dataset. 
 
-```{r}
+```{r, fig.show='hold'}
 # Ensembles -------------------
 cols <- rainbow(20)
 plot(test$dates[1:365], weather[1:365], type = "l", 
@@ -274,6 +276,7 @@ for (i in 1:20) {
     lines(test$dates[1:365], ensembles[1:365, i], 
          col = cols[i], lwd = .2)
 }
+lines(test$dates[1:365], weather[1:365], type = "l")
 points(test$dates[1:365], test[1:365, "tmax"], cex = 1, 
        col = "black", pch = 16)
 
@@ -299,7 +302,7 @@ r, instead of using a test set of the NCEP data, we are using climate model outp
 Below we will generate the scenario's from both 1961-1990 and 2070-2099, along with thir corresponding uncertainty. We will show that, as expected from climate change, the maximum temperatures are expected to be higher in Blogsville in 2070-2099 compard with 1961-1990. Note that similar to the blogsville data, the climate model output comes with the sdsmR package, so we can just load it into R's workspace automatically. 
 
 
-```{r}
+```{r, fig.show='hold'}
 # Load in the climate model output for the two time periods. Recall
 # this comes pre-insalled with the sdsmR package. 
 data(weather_1960)
@@ -307,16 +310,84 @@ data(weather_2070)
 
 # Generate the wetaher using the Blogsville monthly model. 
 # Note that we are using the monthly model for weather demonstration 
-# since it 
+# since it was the same used in the SDSM model, and there is a clear 
+# dependence between time of year and maximum temperatures. 
 blogsville_monthly_mod <- calibrate_model(train[, -which(colnames(train) == "pcrp")], 
                                 y = "tmax", model_type = "monthly")
-preds_1960 <- generate_weather(blogsville_monthly_mod, new_dataframe = weather_1960)
+preds_1960 <- generate_weather(blogsville_monthly_mod, 
+                               new_dataframe = weather_1960)
+preds_2070 <- generate_weather(blogsville_monthly_mod, 
+                               new_dataframe = weather_2070)
 
+# Plot the two figures side by side 
+par(mfrow=c(1,2), oma = c(0, 0, 2, 0))
+plot(preds_1960$dates[1:(365*3)], preds_1960$predictions[1:(365*3)], 
+     type = "l", ylim = c(0, 35), xlab = "", ylab = "Maximum Temperature")
+abline(h = mean(preds_1960$predictions), col = "red", lwd = 2)
+plot(preds_2070$dates[1:(365*3)], preds_2070$predictions[1:(365*3)], 
+     type = "l", ylim = c(0, 35), xlab = "", ylab = "")
+abline(h = mean(preds_2070$predictions), col = "red", lwd = 2)
+mtext("Temperature Max Scenario in Blogsville for Time Periods 
+      1961-1963 and 2070-2072", side = 3, outer = TRUE)
 ```
 
+In the above plot, we see the first three years of generated maxiumum temperatures for each one of our two scenario's. We also plot the mean maximum temperature over all years in each scenario. From the plots, two things jump out. First, the average maxiumum temperature is clearly higher in the second scenario than the first. And second, this seems to be due to an overall shift, since the both the minimum and maximum temperatures for the earlier scenario are lower. 
+
 # Conditional Models 
+Another important function of the SDSM tool is the ability to fit conditional models. The example used for these models in the manual is for precipitation. Since there are many days with no precipitation, SDSM fits a two stage model. First, we will create a new binary variable, $W_{i}$, which equals 1 if there is precipitation on day i, and 0 if there isn't.  Next, we fit a linear regression model to $W_{i}$ using a set of predictor variables, and call this the first stage model. 
+For stage two, we subset the data we are using only to include days in which there is precipitation (ie: $W_{i}$ = 1). Next, call the amount of precipitation on day i $P_{i}$. Using the same predictor variables we used to fit the linear regression model in stage one, fit a linear model to $P_{i}$. And that's it, here is the code which performs those first two steps:
 
+```{r}
+# Create a 0/1 variable which indicates whether or not there 
+# was precipitation on this day. Make sure to do this on both 
+# the training AND test dataset
+train$wetday <- ifelse(train$pcrp > 0, 1, 0)
+test$wetday <- ifelse(test$pcrp > 0, 1, 0)
 
+# Fit a linear model to the wetday variable created above. 
+prec_step1 <- lm(wetday ~ uxx + vxx + zxx + xx500 + humxx, 
+                 data = train)
+
+# Subset the training data to only include data in which there
+# was a wet day. Then, use this dataset to fit a linear model based 
+# on the amount of precipitation
+prec_train <- subset(train, wetday == 1)
+prec_step2 <- lm(pcrp ~ uxx + vxx + zxx + xx500 + humxx, 
+                 data = prec_train)
+```
+
+Now that we have our two linear models calibrated, we move onto generating weather and scenario's with these models. First, we will use our first linear model, `prec_step1`, from above to make a prediction for $W_{i}$. Note that we in SDSM, this value is truncated to be between 0 and 1. For our purposes, we won't need to include this step because, as we will see, truncating this value between 0 and 1 won't affect the prediction. Next, a uniform random number between 0 and 1, call this $U_{i}$, is generated. If $U_{i}$ is greater than $W_{i}$, then we predict there will be no precipitation. If it's smaller, then we will predict that there will be precipitation on this day. 
+
+If we do predict that there will be precipitation on day i, then we will use our second model in order to predict how much precipitation there will be. Below is the R Code which executes these steps to make predictions for the blogsville testing dataset. 
+
+```{r}
+# Define a function to use the two calibrated linear models 
+# in order to predict the amount of precipitation on a given day. 
+# This function will be used below in order to make predictions 
+# for all of our days in the testing dataset. 
+predict_row <- function(lm1, lm2, row) {
+    # Use the first linear model to predict whether or not there
+    # will be a wet day
+    wet_day <- predict(lm1, row)
+    rand <- runif(1)
+
+    # Determine how much precipitation based on the corresponding prediction.
+    # If it's a wet day, determine the amount. However, if it's a non wet day,
+    # then return a 0
+    if (rand < wet_day) {
+        precip_amount <- predict(lm2, row)
+    } else {
+        return(0)
+    }
+}
+
+# Testing this function on a subset of models
+cond_preds <- vector(mode = "numeric", length = 0)
+for (i in 1:nrow(test)) {
+    prediction <- predict_row(prec_step1, prec_step2, test[i,])
+    cond_preds <- c(cond_preds, prediction)
+}
+```
 
 
 # Summary 
