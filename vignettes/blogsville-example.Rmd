@@ -389,9 +389,17 @@ for (i in 1:nrow(test)) {
 }
 ```
 
+Similar to other sections, we have included a way to fi conditional models as part of the sdsmR package. We implement this by specifying the `process = "conditional"` option included in the calibrate_model function. Then when you're using a conditional model fom this function, generate_weather will recognize this, and the predictions will be based on the conditional model algorithm explained above. 
+
+```{r}
+    # Calibrate the conditional model using the calibrate model function. 
+    # Note that we are using the blogsville[, -7] argument as our data
+    # because we don't want to include tmax as a predictor variable.
+    blogsville_cond_mod <- calibrate_model(dataframe = blogsville[, -7], y = "pcrp", 
+                                model_type = "monthly", process = "conditional")
+```
 
 # Summary 
-
 
 
 
