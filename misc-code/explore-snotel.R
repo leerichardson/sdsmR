@@ -1,10 +1,10 @@
 # Download the NIWOT dataset from the online link
 niwot_url <- "http://www.wcc.nrcs.usda.gov/reportGenerator/view_csv/customSingleStationReport/daily/663:CO:SNTL%7Cid=%22%22%7Cname/POR_BEGIN,POR_END/WTEQ::value,PREC::value,TMAX::value,TMIN::value,TAVG::value,PRCP::value"
-download.file(niwot_url)
+download.file(url = niwot_url, destfile = "/home/lee/Dropbox/work/ncar/data/snotel/niwot")
 
 # Real in the downloaded file
-niwot_data <- read.csv("data/snotel/niwot", comment.char = "#",
-                       stringsAsFactors = FALSE)
+niwot_data <- read.csv("/home/lee/Dropbox/work/ncar/data/snotel/niwot",
+                       comment.char = "#", stringsAsFactors = FALSE)
 niwot_data$Date <- as.Date(niwot_data$Date)
 
 

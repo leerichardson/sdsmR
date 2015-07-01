@@ -389,20 +389,109 @@ for (i in 1:nrow(test)) {
 }
 ```
 
-Similar to other sections, we have included a way to fi conditional models as part of the sdsmR package. We implement this by specifying the `process = "conditional"` option included in the calibrate_model function. Then when you're using a conditional model fom this function, generate_weather will recognize this, and the predictions will be based on the conditional model algorithm explained above. 
+Similar to other sections, we have included a way to fi conditional models as part of the sdsmR package. We implement this by specifying the `process = "conditional"` option included in the calibrate_model function. Then when you're using a conditional model fom this function, generate_weather will recognize this, and the predictions will be based on the conditional model algorithm explained above. Next, we show how to fit a conditional model using the sdsmR functions mentioned above, and then graphically display what these predictions look like. 
 
 ```{r}
     # Calibrate the conditional model using the calibrate model function. 
     # Note that we are using the blogsville[, -7] argument as our data
     # because we don't want to include tmax as a predictor variable.
-    blogsville_cond_mod <- calibrate_model(dataframe = blogsville[, -7], y = "pcrp", 
-                                model_type = "monthly", process = "conditional")
+    blogsville_cond_mod <- calibrate_model(dataframe = train[, -7], y = "pcrp",
+                               model_type = "monthly", process = "conditional")
+
+    # Using the calibrated conditional model, generate the weather for 
+    # the testing dataset. Note that the predictions will come out and 
+    blogsville_cond_preds <- generate_weather(models = blogsville_cond_mod, 
+                                              new_dataframe = test)
+    
+    # Plot the conditional predictions 
+    prec_observed <- test[, "pcrp"]
+    plot(blogsville_cond_preds$dates, prec_observed, cex = .2)
+    lines(blogsville_cond_preds$dates, blogsville_cond_preds$predictions, 
+          lwd = .2)    
 ```
+
 
 # Summary 
 
+In this document, we've shown how to implement the main functionality of statistical downscaling using the R programming language. We have replicated the functionality of the four main SDSM functions:
 
+1. Screen Variables
+2. Calbrate Model
+3. Weather Generator
+4. Scenario Generator
+
+While building the tool, we've taken great care to include all of the options that are familiar to users of the SDSM tool, such as fitting monthly/seasonal models, including an autoregressive term, generating the same tables, etc..
+
+Throughout the document, we have shown how to obtain the SDSM outputs in two different ways. First, we've shown how you can produce these results with raw R code, which could be mimicked for particular use cases just by modifying a few lines of code. Next, we've shown how to use the functions provided by the sdsmR package to obtain the identical results. The reason we have taken this approach is because we believe there is value in both approaches. If a user wants to get something done quickly, or just doesn't want to type out the same lines of code over and over, using the pre-made functions is a good approach. However, if someone wants to really understand the process of statistical downscaling, and all of the steps involved, going through the actual code and trying to repeat it for your unique problem is a great way to learn.
+
+To go a bit further in understanding what's happening under the hood with statistical downscaling, all of the code used is posted online at https://github.com/leerichardson/sdsmR
 
 # Supplement: Loading Data
 
+Before you can perform any of the calculations mentioned in the vignette, you must first have the data loaded into R's workspace as a dataframe. Generally speaking, this task is different for most data-sets you encounter, so we didn't decide to include it in the main sections of this document. The idea behind a dataframe is that every row is an observation, and every column is a variable. Once the data is into this form, executing statistical functions and algorithms becomes much simpler and reproducible for others. 
 
+To give a flavor of how to transform a dataset into a dataframe, we are including the code and steps used to download the example blogsville dataset from the SDSM web page and convert it into a dataframe. While future situations most likely won't be identical to this, hopefully some of the ideas can be useful when you need to convery your data-set into a dataframe. 
+
+## Blogsville Data 
+
+First, you can download the Blogsville data at the following link on the SDSM homepage http://co-public.lboro.ac.uk/cocwd/SDSM/blogsville.html. This data-set has four different directories:
+
+* gcmx1961-90. GCM output from five different predictor variables from 1961-1990. Ultimately used to generate scenarios for the desired local variables in this time period.  
+* gcmx2070-99. GCM output from five different predictor variables from 2070-2099. Used in the same way as the GCM output above. 
+* ncep1961-90. NCEP re-analysis data from the five predictor variables from 1961-1990. This data is used to build the statistical model between our local variable and larger scale climate variables. 
+* observed1961-90. These are the local variables we are hoping to understand. In this case, we have maximum temperature and precipitation. 
+
+We need to bring the data into our R workspace in a useable form. In R, the most common way to do this is to combine all of our data into one data frame. We achieve this with the blogsville data using the following commands (note that there are many ways to do this):
+
+
+```{r}
+# Obtain a list of all the ncep predictor files
+variable_names <- list.files("/home/lee/Dropbox/work/ncar/data/blogsville/ncep1961-90/")
+predictor_files <- paste0("/home/lee/Dropbox/work/ncar/data/blogsville/ncep1961-90/", 
+                          variable_names)
+
+# Set up a data-frame to store the variables. 
+# Do this by reading in the first file and figuring 
+# out the number of rows, then allocating a dataframe of that length.     
+temp <- read.table(predictor_files[1])
+n <- dim(temp)[1]
+predictor_matrix <- as.data.frame(matrix(NA, nrow=n, ncol=0))    
+
+# Combine all of the predictor variables into a data frame 
+# by looping through each file, reading it in, 
+# and binding it (with cbind) to the predictor matrix. 
+for (file in predictor_files) {
+    single_pred <- read.table(file, stringsAsFactors=FALSE)        
+    predictor_matrix <- cbind(predictor_matrix, single_pred)
+}
+
+# Rename the variables in the predictor matrix. 
+# This will help up later on since it will make the names 
+# in all of the different directories uniform
+predictor_names <- c("uxx", "vxx", "zxx", "xx500", "humxx")
+colnames(predictor_matrix) <- predictor_names
+
+# Finally, read in our predictand variables, get a sequence of 
+# dates, and combine these with our predictor matrix. Note that one 
+# of the tmax observations comes in as a stange character, so we need 
+# to deal with this as a special case. stringsAsFactors = FALSE is just 
+# used out of habit, since it usually helps out. You can also set this as the
+# default in your R options. 
+tmax_predictand <- read.table("/home/lee/Dropbox/work/ncar/data/blogsville/observed1961-90/TMAX.DAT", 
+                              stringsAsFactors = FALSE)
+colnames(tmax_predictand) <- "tmax"
+pcrp_predictand <- read.table("/home/lee/Dropbox/work/ncar/data/blogsville/observed1961-90/PRCP.DAT", 
+                              stringsAsFactors = FALSE)
+colnames(pcrp_predictand) <- "pcrp"
+
+# WARNING: when downloading this data, in the observed1961-90/TMAX.DAT file,
+# line number 10105 currently contains a non numeric symbol. To deal with this, 
+# you can either open the file and replace the symbol with "NA", or use the line 
+# tmax_predictand[10105,] <- NA after you read in this variable.
+
+# Get a vector of the dates used in the blogsville data. Finally, 
+# combine all of these together. 
+dates <- seq(as.Date("1960-01-01"), by=1, len = 10957)
+blogsville <- cbind(dates, predictor_matrix, tmax_predictand, pcrp_predictand)
+head(blogsville)
+```

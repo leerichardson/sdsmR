@@ -114,15 +114,26 @@ combine_files <- function(type = "directory", file_list = NULL,
 # and longitude and save the time series in a corresponding
 # output directory
 get_ncep_vars <- function(input_dir = "/glade/p/image/rmccrary/NCEP2/",
-                          output_dir = "/glade/p/work/lrich/ncep_vars/",
+                          output_dir = "/glade/p/work/lrich/ncep_vars/test/",
                           latitude, longitude, levels =c(925, 850, 700, 500)) {
 
     # Make sure that the ncdf4 package is installed before someone runs
     # this function.
     if (!requireNamespace("ncdf4", quietly = TRUE)) {
-        stop("ncdf4 package needed for this function to work. Please install it.",
+        stop("ncdf4 package needed for this function to work. Please install",
              call. = FALSE)
     }
+
+    # Check to see if the directory already exists. If yes, recursively
+    # remove it and start an empty directory for saving the file
+    # If no, then create the directory and start saving the files here.
+    if (dir.exists(output_dir)) {
+        unlink(output_dir, recursive = TRUE)
+        dir.create(output_dir)
+    } else {
+        dir.create(output_dir)
+    }
+
 
     # Get a list of the files, only keep the files with the proper structure,
     # and grab the unique variable names present in each structure.
