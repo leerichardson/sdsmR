@@ -16,7 +16,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.height = 7, fig.width
 
 # Introduction
 
-In this document, we will talk through how to perform statistical downscaling, such as the kind performed by the Statistical Downscaling Model (SDSM) tool, in the R language. Statistical downscaling is a method of relating large scale variables such as those from General Circulation Model (GCM) output, or Re-Analysis data, to local, usually pointwise variables. Statistical downscaling provides a method for performing local impact studies, such as assessing the risk of flooding in a particular city, under different climate change scenario's. At a high level, what's being done is building a statistical model of the relationship between these large scale variables (such as surface temperature inside a gridbox), and and a local variable using re-analysis data, and then using this relationship to generate scenario's for how the local variable responds to various climates. 
+In this document, we will walk through how to perform statistical downscaling, such as the kind performed by the Statistical Downscaling Model (SDSM) tool, in the R language. Statistical downscaling is a method of relating large scale variables, such as those from General Circulation Model (GCM) output, to local, usually pointwise variables. Statistical downscaling provides a method for performing local impact studies, such as assessing the risk of flooding in a particular city, under different climate change scenario's. At a high level, what's being done is building a statistical model of the relationship between large scale variables  and and a local variable using re-analysis data, and then using this relationship to generate scenario's for how the local variable responds to various climates. 
 
 We will walk through the Blogsville eample used in the SDSM manual, and show how you can perform these calculations in the R language. Also, we will show how you can use various functions provided by the sdsmR package to speed up process. 
 
@@ -405,7 +405,9 @@ Similar to other sections, we have included a way to fi conditional models as pa
     
     # Plot the conditional predictions 
     prec_observed <- test[, "pcrp"]
-    plot(blogsville_cond_preds$dates, prec_observed, cex = .2)
+    plot(blogsville_cond_preds$dates[1:365], prec_observed[1:365], cex = .2, 
+         main = "Blogsville Conditional Vs. Predicted Precipitation 
+         year 1975", ylab = "Precipitation Amount", xlab = "Time")
     lines(blogsville_cond_preds$dates, blogsville_cond_preds$predictions, 
           lwd = .2)    
 ```

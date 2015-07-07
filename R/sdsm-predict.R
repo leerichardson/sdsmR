@@ -18,7 +18,7 @@
 #' @return A two column dataframe with dates and predicted weather. The dataframe
 #' is ordered chronologically from the dates column.
 generate_weather <- function(models, new_dataframe, uncertainty = "ensemble",
-                             num_ensembles = 1) {
+                             num_ensembles = 1, y = NULL) {
 
     # Determine how many models in the list
     num_mods <- length(models)
@@ -28,6 +28,19 @@ generate_weather <- function(models, new_dataframe, uncertainty = "ensemble",
     date_column_index <- as.numeric(which(classes == "Date"))
     if (length(date_column_index) == 0) {
         stop("Need a column of the Date Class")
+    }
+
+    # Check to see if the models include an autoregressive
+    # term. If yes, add the autoregressive variable to the
+    # dataframe
+    if ("autoregression" %in% names(models[[1]]$coefficients)) {
+        if (is.null(y)) {
+            stop("Must specify the name of the response variable
+                 if using an autoregressive model. Make sure y is
+                 a character vector")
+        } else {
+            new_dataframe <- add_autoregression(new_dataframe, y)
+        }
     }
 
     # Pull out the seasonal/monthly aspects of the data

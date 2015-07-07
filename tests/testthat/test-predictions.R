@@ -11,6 +11,16 @@ test_that("generate weather returns the correct size dataframe for unconditional
 
     # Test on this set-up data
     expect_output(str(annual_preds), "10957 obs. of  22 variables:", all = FALSE)
+
+    # Make sure autoregressive mode still workd
+    autoreg_mod <- calibrate_model(blogsville, y = "tmax", model_type = "annual",
+                                   autoregression = "true")
+    autoreg_preds <- generate_weather(autoreg_mod,
+                                     new_dataframe = blogsville, uncertainty = "ensemble",
+                                     num_ensembles = 20, y = "tmax")
+
+    expect_output(str(autoreg_preds), "10957 obs. of  22 variables:", all = FALSE)
+
     }
 )
 

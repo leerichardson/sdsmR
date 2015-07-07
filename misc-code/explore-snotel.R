@@ -1,25 +1,51 @@
+# Cleaning/Tidying the data ----------------------------
+
 # Download the NIWOT dataset from the online link
 niwot_url <- "http://www.wcc.nrcs.usda.gov/reportGenerator/view_csv/customSingleStationReport/daily/663:CO:SNTL%7Cid=%22%22%7Cname/POR_BEGIN,POR_END/WTEQ::value,PREC::value,TMAX::value,TMIN::value,TAVG::value,PRCP::value"
 download.file(url = niwot_url, destfile = "/home/lee/Dropbox/work/ncar/data/snotel/niwot")
 
 # Real in the downloaded file
-niwot_data <- read.csv("/home/lee/Dropbox/work/ncar/data/snotel/niwot",
+niwot_data <- read.csv("/home/lee/Dropbox/work/ncar/data/snotel/niwot_snotel",
                        comment.char = "#", stringsAsFactors = FALSE)
 niwot_data$Date <- as.Date(niwot_data$Date)
+colnames(niwot_data) <- c("date", "swe", "precip_accum", "temp_max", "temp_min",
+                          "temp_avg", "precip_inc")
 
+# Read in the niwot predictor variables
+niwot_predictors <- read.csv("/home/lee/Dropbox/work/ncar/data/snotel/niwot.csv")
+date <- seq(as.Date("1979-01-01"), by = 1, len = nrow(niwot_predictors))
+niwot_predictors <- cbind(date, niwot_predictors)
 
-# Plot all of the variables over a two year period.
+# Merge together the predictor and predictands. And remove
+# the two datasets that we merged together!
+niwot <- merge(niwot_data, niwot_predictors, by = "date",
+               all.x = TRUE, sort = TRUE)
+rm(niwot_data, niwot_predictors)
+
+# Exploratory Analysis -------------------------------------------
+
+# Plot all of the variables over a two year period to see
+# their overall relationship
 par(mfrow = c(2,3))
 plot_index <- 3288:5000
-plot_dates <- niwot_data$Date[plot_index]
-plot(plot_dates, niwot_data$Snow.Water.Equivalent..in.[plot_index], main = "Snow Water Equivalent")
-plot(plot_dates, niwot_data$Precipitation.Accumulation..in.[plot_index], main = "Precipitation Accumulation")
-plot(plot_dates, niwot_data$Precipitation.Increment..in.[plot_index], main = "Precipitation Increment")
-plot(plot_dates, niwot_data$Air.Temperature.Maximum..degF.[plot_index],
+plot_dates <- niwot$date[plot_index]
+plot(plot_dates, niwot$swe[plot_index], main = "Snow Water Equivalent")
+plot(plot_dates, niwot$precip_accum[plot_index], main = "Precipitation Accumulation")
+plot(plot_dates, niwot$precip_inc[plot_index], main = "Precipitation Increment")
+plot(plot_dates, niwot$temp_max[plot_index],
      main = "Maximum Temperature", ylim = c(-5, 90))
-plot(plot_dates, niwot_data$Air.Temperature.Average..degF.[plot_index],
+plot(plot_dates, niwot$temp_avg[plot_index],
      main = "Average Temperature", ylim = c(-5, 90))
-plot(plot_dates, niwot_data$Air.Temperature.Minimum..degF.[plot_index],
+plot(plot_dates, niwot$temp_min[plot_index],
      main = "Minimum Temperature", ylim = c(-5, 90))
+par(mfrow = c(1, 1))
 
 
+
+generate_table()
+
+# Variable Selection/Modleing -----------------------
+# Split the dataframe
+train <- split_dataframe(tmaxMatrix)$train
+test <- split_dataframe(tmaxMatrix)$test
+observed <- test[,"tmaxFortHood"]

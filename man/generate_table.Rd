@@ -2,9 +2,9 @@
 % Please edit documentation in R/sdsm-exploratory.R
 \name{generate_table}
 \alias{generate_table}
-\title{Generate diagnostic plots for predictors and predictands.}
+\title{Generate diagnostic tables for predictors and predictands.}
 \usage{
-generate_table(plotname, dataframe, y, conditional = FALSE,
+generate_table(plotname, dataframe, y = "empty", conditional = FALSE,
   conditional_step = 1)
 }
 \arguments{
@@ -12,24 +12,24 @@ generate_table(plotname, dataframe, y, conditional = FALSE,
 if your data comes from the blogsville data-set, you might
 want to call this "blogsville". If you want to save the plot
 in a different directory, just specify this in this name:
-"/home/blogsville" will}
+"/home/blogsville" will save the plot's in the home directory.}
 
 \item{dataframe}{a dataframe object which contains a column
 of dates, the predictand (response) variable, as well as the
 predictor variables.}
 
 \item{y}{The predictand (response) variable name from the
-same dataframe.}
+same dataframe. This must be a character!}
 
 \item{conditional}{Whether you want the correlations to correspond
 to the conditional model. If TRUE, then the function will return
-correlations for the repsonse variable, which aspect of the conditional
+correlations for the response variable. The step of the conditional
 model it will return is determined by the conditional_step parameter.}
 
 \item{conditional_step}{Determines whether the first or second step of
 the conditional model is returned. If 1, then this will return the
 correlations with the 0/1 reponse variable. If 2, then the tables
-will correspond to the orinal repsonse variable, but only on the
+will correspond to the original response variable, but only on the
 days in which the variable is a 1.}
 }
 \value{
@@ -40,6 +40,14 @@ two PDF file diagnostic plots.
 This function is meant to replicate the screen variables
 section of the SDSM tool. It creates two plots, the table
 which shows the correlations between predictors in all individual
-months and annually, as well as the
+months and annually, as well as the correlations between
+predictor variables in all months.
+}
+\examples{
+# Generate diagnostic tables for both temperature maximum and
+# precipitation.
+generate_table("blogsville_explore", blogsville, y = "tmax")
+generate_table("blogsville_explore", blogsville, y = "pcrp",
+     conditional = TRUE, conditional_step = 1)
 }
 

@@ -94,9 +94,9 @@ combine_files <- function(type = "directory", file_list = NULL,
     vec <- vector("double")
     for (file in files) {
         if (is.null(level) == TRUE) {
-            timeseries <- pull_timeseries(files, lat, lon)
+            timeseries <- pull_timeseries(file, lat, lon)
         } else {
-            timeseries <- pull_timeseries(files, lat, lon, level)
+            timeseries <- pull_timeseries(file, lat, lon, level)
         }
         vec <- c(vec, timeseries)
     }
@@ -109,6 +109,48 @@ combine_files <- function(type = "directory", file_list = NULL,
     return(normalized_vec)
 }
 
+# Function to combine the CSV's into one giant dataframe
+combine_csvs <- function(input_dir, output_dir,
+                         csv_name = "combined_df.csv") {
+    files <- list.files(input_dir)
+
+    # Pull the number of expected rows from a given file. We
+    # will check in the code to pull the variables that they
+    # match this number of rows
+    sample_dataframe <- read.csv(paste0(input_dir, files[1]))
+    expected_rows <- nrow(sample_dataframe)
+
+    for (file in files) {
+        print(file)
+
+        tmp <- read.csv(paste0(input_dir, file))
+        if (nrow(tmp) != expected_rows) {
+            files = files[-which(files == file)]
+            print("SKIPPED")
+            print(paste0(nrow(tmp)))
+            next
+        }
+
+        # Check to see if this is the first file we are
+        # looping through. If yes, then create a new dataframe.
+        # If no, then just append
+        if (file == files[1]) {
+            dataframe <- data.frame(row1 =  tmp)
+        } else {
+            dataframe <- cbind(dataframe, tmp)
+        }
+    }
+
+    # Add in the column names to the final dataframe based
+    # on the filenames, removing the .csv
+    var_names <- gsub(".csv", "", files)
+    colnames(dataframe) <- var_names
+
+    # Write the final csv as a dataframe in the output
+    # directory and return the dataframe
+    write.csv(dataframe, paste0(output_dir, csv_name), row.names = FALSE)
+    return(dataframe)
+}
 
 # Function to grab the NCEP variables for a given latitude
 # and longitude and save the time series in a corresponding
@@ -127,13 +169,12 @@ get_ncep_vars <- function(input_dir = "/glade/p/image/rmccrary/NCEP2/",
     # Check to see if the directory already exists. If yes, recursively
     # remove it and start an empty directory for saving the file
     # If no, then create the directory and start saving the files here.
-    if (dir.exists(output_dir)) {
+    if (file.exists(output_dir)) {
         unlink(output_dir, recursive = TRUE)
         dir.create(output_dir)
     } else {
         dir.create(output_dir)
     }
-
 
     # Get a list of the files, only keep the files with the proper structure,
     # and grab the unique variable names present in each structure.
@@ -145,12 +186,27 @@ get_ncep_vars <- function(input_dir = "/glade/p/image/rmccrary/NCEP2/",
     # Loop through each one of the variables, grab all of its
     # corresponding netCDF files, and then pull our the needed time series
     # and append them all together.
+    count <- 0
     for (var in vars) {
+        count <- count + 1
+        print(paste0("Variable: ", var, ", Number: ", count,  " Of ", length(vars)))
 
         # Grab a list of all the files corresponding to the
         # specific variable we are currently looping through
         files <- datafiles[grep(paste0(var, ".[[:digit:]]{4}.nc"), datafiles)]
         files <- paste0(input_dir, files)
+
+        # Remove the files from 2011 and 2012
+        num_chars <- unique(nchar(files))
+        if (length(num_chars) > 1) {
+            stop("Should only be one length for all files")
+        }
+        years <- as.numeric(substr(files, num_chars - 6, num_chars - 3))
+        if (length(which(years > 2010)) == 0) {
+            message("Data until 2010!")
+        } else {
+            files <- files[-which(years > 2010)]
+        }
 
         # Check to see how many levels are in the given net CDF File.
         # If there is only one, then write the time series for the surface
@@ -160,8 +216,10 @@ get_ncep_vars <- function(input_dir = "/glade/p/image/rmccrary/NCEP2/",
                                     lat = latitude, lon = longitude)
                 n <- length(ts)
                 ts_lag <- c(NA, ts[1:(n-1)])
-                write.csv(ts, paste0(output_dir, var, "_surface.csv"))
-                write.csv(ts_lag, paste0(output_dir, var, "_surface_lag.csv"))
+                write.csv(ts, paste0(output_dir, var, "_surface.csv"),
+                          row.names = FALSE)
+                write.csv(ts_lag, paste0(output_dir, var, "_surface_lag.csv"),
+                          row.names = FALSE)
 
         } else {
             for (level in levels) {
@@ -170,9 +228,13 @@ get_ncep_vars <- function(input_dir = "/glade/p/image/rmccrary/NCEP2/",
                                     level = level)
                 n <- length(ts)
                 ts_lag <- c(NA, ts[1:(n-1)])
-                write.csv(ts, paste0(output_dir, var, "_", level, ".csv"))
-                write.csv(ts_lag, paste0(output_dir, var, "_", level, "_lag.csv"))}
+                write.csv(ts, paste0(output_dir, var, "_", level, ".csv"),
+                          row.names = FALSE)
+                write.csv(ts_lag, paste0(output_dir, var, "_", level, "_lag.csv"),
+                          row.names = FALSE)
+            }
         }
     }
-}
 
+    combine_csvs(input_dir = output_dir, output_dir = "/glade/p/work/lrich/", csv_name = "combined_df.csv")
+}

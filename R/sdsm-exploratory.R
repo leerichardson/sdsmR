@@ -33,7 +33,7 @@ combine_predictors <- function(file_list, var_names = NULL){
     return(predictor_matrix)
 }
 
-# Function to look up the variable name from the file name
+# Function to look up the variable name from the file naem
 name_lookup <- function(filename){
     if (length(which(file_lookup[,"normal"] == filename)) == 0) {
         var.name <- file_lookup[which(file_lookup[,"one.day.lag"] == filename),"name"]
@@ -64,12 +64,14 @@ split_dataframe <- function(dataframe, percentage = .6){
     return(list(train = train, test = test))
 }
 
-#' Generate diagnostic plots for predictors and predictands.
+
+#' Generate diagnostic tables for predictors and predictands.
 #'
 #' This function is meant to replicate the screen variables
 #' section of the SDSM tool. It creates two plots, the table
 #' which shows the correlations between predictors in all individual
-#' months and annually, as well as the
+#' months and annually, as well as the correlations between
+#' predictor variables in all months.
 #'
 #' @export
 #'
@@ -77,51 +79,58 @@ split_dataframe <- function(dataframe, percentage = .6){
 #' if your data comes from the blogsville data-set, you might
 #' want to call this "blogsville". If you want to save the plot
 #' in a different directory, just specify this in this name:
-#' "/home/blogsville" will
+#' "/home/blogsville" will save the plot's in the home directory.
 #' @param dataframe a dataframe object which contains a column
 #' of dates, the predictand (response) variable, as well as the
 #' predictor variables.
 #' @param y The predictand (response) variable name from the
-#' same dataframe.
+#' same dataframe. This must be a character!
 #' @param conditional Whether you want the correlations to correspond
 #' to the conditional model. If TRUE, then the function will return
-#' correlations for the repsonse variable, which aspect of the conditional
+#' correlations for the response variable. The step of the conditional
 #' model it will return is determined by the conditional_step parameter.
 #' @param conditional_step Determines whether the first or second step of
 #' the conditional model is returned. If 1, then this will return the
 #' correlations with the 0/1 reponse variable. If 2, then the tables
-#' will correspond to the orinal repsonse variable, but only on the
+#' will correspond to the original response variable, but only on the
 #' days in which the variable is a 1.
 #' @return A correlation matrix between predictor variables and
 #' two PDF file diagnostic plots.
-generate_table <- function(plotname, dataframe, y, conditional = FALSE,
+#' @examples
+#' # Generate diagnostic tables for both temperature maximum and
+#' # precipitation.
+#' generate_table("blogsville_explore", blogsville, y = "tmax")
+#' generate_table("blogsville_explore", blogsville, y = "pcrp",
+#'      conditional = TRUE, conditional_step = 1)
+generate_table <- function(plotname, dataframe, y = "empty", conditional = FALSE,
                      conditional_step = 1) {
 
-    # Convert the response variable to a character string
-    # if it was input to the function as a different class.
-    test <- try(class(y))
-    if (class(test) != "character" & test != "data.frame") {
-        response_name <- deparse(substitute(y))
-    } else {
-        response_name <- y
+    # Verify that the predictand variable is a character/string, and
+    # that the dataframe contains a column of the class "Date"
+    stopifnot(
+        class(y) == "character",
+        "Date" %in% unlist(lapply(dataframe, class))
+    )
+
+    # Pull the date column index for use later on in the program.
+    date_column_index <- as.numeric(which(unlist(lapply(dataframe, class)) == "Date"))
+    if (length(date_column_index) > 1) {
+        warning("More than one Date column in dataframe")
     }
 
     # Based on whether or not the model is conditional or unconditional,
     # subset the dataframe accordingly. IE: if it's
     if (conditional == TRUE) {
-        print("Generating table for Conditional Model")
-        dataframe$cond <- ifelse(dataframe[, response_name] > 0, 1, 0)
+        dataframe$cond <- ifelse(dataframe[, y] > 0, 1, 0)
         if (conditional_step == 1) {
-            dataframe <- dataframe[, !names(dataframe) %in% c(response_name)]
-            response_name <- "cond"
+            dataframe <- dataframe[, !names(dataframe) %in% c(y)]
+            y <- "cond"
         } else if (conditional_step == 2) {
             dataframe <- subset(dataframe, cond == 1)
             dataframe <- dataframe[, !names(dataframe) %in% c("cond")]
         } else {
             stop("Conditional Step must be either 1 or 2")
         }
-    } else if (conditional == FALSE) {
-        print("Generating table for Unconditional Model")
     }
 
     # Get the initital information such as number of predictors and data-points
@@ -141,9 +150,9 @@ generate_table <- function(plotname, dataframe, y, conditional = FALSE,
     for (i in 1:length(times)) {
         # Subset the initial dataframe based on the month
         if (i < 10) {
-            subset_df <- subset(dataframe, format.Date(dates, "%m")== paste0(0, i))
+            subset_df <- dataframe[which(format.Date(dataframe[, date_column_index], "%m") == paste0(0, i)), ]
         } else if (i < 13) {
-            subset_df <- subset(dataframe, format.Date(dates, "%m")== paste0(i))
+            subset_df <- dataframe[which(format.Date(dataframe[, date_column_index], "%m") == paste0(i)), ]
         } else {
             subset_df <- dataframe
         }
@@ -153,9 +162,15 @@ generate_table <- function(plotname, dataframe, y, conditional = FALSE,
         # the na.rm option.
         subset_df <- subset_df[complete.cases(subset_df), ]
 
+        # Skip if the response variable is all 0's in this specific
+        # month (IE: for snow!)
+        if (length(table(subset_df[, y])) == 1) {
+            next
+        }
+
         # Get the correlation matrix for the top 30ish variables
-        tmp <- cor(subset_df[,!names(subset_df) %in% c("dates")], use = "complete")
-        top_vars <- order(abs(as.vector(tmp[,response_name])), decreasing=TRUE)
+        tmp <- cor(subset_df[, -date_column_index])
+        top_vars <- order(abs(as.vector(tmp[,y])), decreasing=TRUE)
         if (length(top_vars) < 15) {
             corrplot::corrplot(tmp[top_vars, top_vars], method="square", addgrid.col="black",
                                addCoef.col = "black", tl.col="black",
@@ -166,49 +181,55 @@ generate_table <- function(plotname, dataframe, y, conditional = FALSE,
                                title = paste0(times[i], " Top Variable Correlations"))
         }
 
-
         for (j in 1:num_vars) {
             # Skip if we are either going through the response variable or
             # the dates column
             if (class(subset_df[,j]) != "numeric") {
                 next
             }
-            if (names(subset_df)[j] == response_name) {
+            if (names(subset_df)[j] == y) {
                 next
             }
 
-            r <- cor(subset_df[,j], subset_df[,response_name])
+            r <- cor(subset_df[, j], subset_df[, y])
             results[j, i] <- round(r^2, digits=2)
         }
     }
     dev.off()
 
-    ## Remove the rows with nothing in them, either the response variable or the dates
+    # Remove the rows with nothing in them, either the response variable or the dates
     results <- results[!is.na(results[,"annual"]),]
 
-    ## Order by the most correlated annually
+    # Replace all of the NA columns with 0's. This is because summer
+    # has some values which are all 0. This makes it so corrplot
+    # will still work!
+    for (i in 1:ncol(results)) {
+        results[is.na(results[, i]), i] <- 0
+    }
+
+    # Order by the most correlated annually
     annual_rank <- order(as.vector(results[,"annual"]), decreasing=TRUE)
     results <- results[annual_rank,]
 
-    ## Create a PDF of the dataframe
+    # Create a PDF of the dataframe
     maxrow = 15;
     npages = ceiling(nrow(results)/maxrow);
     pdf(paste0(plotname, "_cor_explained.pdf"), height = 15, width=15)
 
-    ## Get the correct index of the matrix for a specific page of the PDF
+    # Get the correct index of the matrix for a specific page of the PDF
     for(i in 1:npages){
         page <- seq(1+((i-1)*maxrow), i*maxrow)
         if(i == npages){
             page <- seq(1+((i-1)*maxrow), nrow(results))
         }
-        ## Correlation Plot to add into the
+        # Correlation Plot to add into the
         corrplot::corrplot(results[page,], method="circle", is.corr=FALSE, cl.lim = c(0,1),
                            addgrid.col="black",addCoef.col = "black", tl.col="black",
                            title = "Monthly and Annual explained \n Variance by Predictor")
     }
     dev.off()
 
-    ## Return the correlation matrix
+    # Return the correlation matrix
     return(results)
 }
 

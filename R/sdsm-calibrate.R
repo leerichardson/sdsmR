@@ -34,6 +34,17 @@ add_season <- function(dataframe, month_column) {
     return(dataframe)
 }
 
+# Function to add in the autoregressive vairable into
+# the linear model
+add_autoregression <- function(dataframe, response_name) {
+    response <- ts(dataframe[, response_name])
+    lagged <- lag(response, -1)
+    tmp = cbind(lagged, response)
+    lagged_vec <- tmp[1:(nrow(tmp) - 1),1]
+    dataframe$autoregression <- lagged_vec
+    return(dataframe)
+}
+
 #' Build a Linear Regression for Statistical Downscaling
 #'
 #' This function is meant to replicate the calibrate model
@@ -88,11 +99,7 @@ calibrate_model <- function(dataframe, y, model_type = "annual",
     # Add in a lagged variable to the regression models if that option
     # has beens specified
     if (autoregression == "true") {
-        response <- ts(dataframe[, response_name])
-        lagged <- lag(response, -1)
-        tmp = cbind(lagged, response)
-        lagged_vec <- tmp[1:(nrow(tmp) - 1),1]
-        dataframe$autoregression <- lagged_vec
+        dataframe <- add_autoregression(dataframe, response_name)
     } else if (autoregression != "false") {
         stop("autoregression must be true or false")
     }
@@ -223,7 +230,7 @@ summarize_models <- function(model_list) {
                                               standard.error = standard_error,
                                               coefficients = coefs))
                               }
-    )
+                        )
 
 }
 
