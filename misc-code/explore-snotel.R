@@ -40,12 +40,39 @@ plot(plot_dates, niwot$temp_min[plot_index],
      main = "Minimum Temperature", ylim = c(-5, 90))
 par(mfrow = c(1, 1))
 
+# Use the generate_table function which comes with the sdsmR
+# package in order to explore the
+generate_table("/home/lee/niwot", niwot, y = "swe")
 
-
-generate_table()
+# Look into the relationship between precipitation accumulation
+# and snow water equivalent.
+plot_index <-3288:(3288 + 365)
+plot(niwot$date[plot_index], niwot$swe[plot_index], cex = .5,
+     pch = 16, ylim = c(0, 70))
+lines(niwot$date[plot_index], niwot$precip_accum[plot_index],
+      col = "blue", lwd = 3)
+lines(niwot$date[plot_index], niwot$temp_avg[plot_index],
+      col = "red", lwd = .5)
 
 # Variable Selection/Modleing -----------------------
-# Split the dataframe
-train <- split_dataframe(tmaxMatrix)$train
-test <- split_dataframe(tmaxMatrix)$test
-observed <- test[,"tmaxFortHood"]
+
+# Split the dataframe into training and testing
+# datasets.
+train <- split_dataframe(niwot)$train
+test <- split_dataframe(niwot)$test
+observed <- test[, "swe"]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

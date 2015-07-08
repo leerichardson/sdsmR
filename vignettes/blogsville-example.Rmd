@@ -16,17 +16,16 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.height = 7, fig.width
 
 # Introduction
 
-In this document, we will walk through how to perform statistical downscaling, such as the kind performed by the Statistical Downscaling Model (SDSM) tool, in the R language. Statistical downscaling is a method of relating large scale variables, such as those from General Circulation Model (GCM) output, to local, usually pointwise variables. Statistical downscaling provides a method for performing local impact studies, such as assessing the risk of flooding in a particular city, under different climate change scenario's. At a high level, what's being done is building a statistical model of the relationship between large scale variables  and and a local variable using re-analysis data, and then using this relationship to generate scenario's for how the local variable responds to various climates. 
+In this document, we will walk through how to perform statistical downscaling, such as the kind performed by the Statistical Downscaling Model (SDSM) tool, in the R language. Statistical downscaling is a method of relating large scale variables, such as those from General Circulation Model (GCM) output, to local, typically pointwise variables. Statistical downscaling provides a method for performing local impact studies, such as assessing the risk of flooding in a particular city under different climate change scenario's. At a high level, what's being done is building a statistical model of the relationship between large scale variables (for example, temperature in a 50 x 50 km gridbox) and local variables using re-analysis data, and then using this statistical relationship to generate scenario's for how the local variable responds to various climates. 
 
-We will walk through the Blogsville eample used in the SDSM manual, and show how you can perform these calculations in the R language. Also, we will show how you can use various functions provided by the sdsmR package to speed up process. 
+We will walk through the Blogsville example used in the SDSM manual, and show how you can perform these calculations in the R language. Also, we will show how you can use various functions provided by the sdsmR package to accelerate the process. 
 
 # Exploratory Data Analysis 
 
 ## Accessing the data
-Before we do anything, we must load the Blogsville data into our R workspace. Loading data into R is both art and science, and there isn't an exact recipe for loading every dataset you will encounter into R. For this reason, we will include instructions on how to load the Blogsville dataset into R manually in a supplement of this document, to get a flavor for how this is done. For now, we use the blogsville dataframe which comes pre-installed with the sdsmR package to walk through the steps of statistical downscaling. 
+Before we do anything, we must load the Blogsville data into R's workspace. Loading data into R is heavily dependent on your data-set, and there isn't an exact recipe for accessing every dataset you will encounter into R. From this, we will include instructions on how to load the Blogsville dataset into R manually in a supplement of this document, to get a flavor for how this is done. For convinience, we use the blogsville dataframe which comes pre-installed with the sdsmR package to walk through the steps of statistical downscaling. 
 
-The fact that blogsville is a dataframe object in R is very important, and this allows lots of the other commands and functions to work properly. If you are working through this tutorial with a different dataset, the best first step to take would be to combine all of your data into one dataframe object. This will allow you to work through the tutorial smoothly and use all of the functionality of sdsmR. For tips and an example of how to load data into a dataframe, see the supplement of this document. 
-
+That the pre-stalled blogsville data-set is a dataframe object in R is very important. Most of the commands and functionality of the sdsmR package are designed to work specifically for dataframes. If you are working through this tutorial with a different dataset, the best first step would be to combine all of your data into one dataframe object. This will allow you to work through the tutorial smoothly and use all of the functionality of sdsmR. 
 
 ```{r}
 # Load the sdsmR package into memory, and view what the 
@@ -39,31 +38,40 @@ The above code loads in the sdsmR package, which includes a dataframe named blog
 
 ## Example plots 
 
-Whenever building a statistical model, the first step is to visualize the data and look into the relationships between predictor and predictand variables. For those familiar with the SDSM tool, the first stage of the analysis is usually the Screen Variables section. In SDSM, the three main plots for exploratory data analysis are:
+Whenever you build a statistical model, the first step is to visualize the data and explore the relationships between predictor and predictand variables. For those familiar with the SDSM tool, the first stage of the analysis is usually the Screen Variables section. In SDSM, the three main plots for exploratory data analysis are:
 
-1. The explained variance due to each predictor on the predictand, by month. 
+1. The explained variance from each predictor on the predictand, by month. 
 1. Correlation between all predictor variables, by month. 
-1. Scatterplot of an individual predictor and predictand. 
+1. Scatterplots of the relationship between an individual predictor and predictand. 
 
-Creating these first two plots is a bit tricky. Due to this, we have created a function, called generate_table, which can be used to create these informative tables. The structure of this function is that you input a filepath, dataframe, and specify the predictand variable, and as an output you will recieve two pdf files with these two tables, in the filepath specified as an input. For example, here is how I would save the explained variance and correlation tables for maximum temperature into my home directory:
+Creating these first two plots is a bit tricky. Due to this, we have created a function, called generate_table, which can be used to create these informative tables. The structure of this function is that you input a filepath, dataframe, and specify the predictand variable, and as an output you will recieve two pdf files with the first two tables, in the filepath specified as an input. For more detailed information and examples on how to use this function, access the help file with `?generate_table`. 
+
+For example, here is how I would save the explained variance and correlation tables for maximum temperature into my home directory:
 
 ```{r, eval=FALSE}
-generate_table("/home/lee/example", blogsville, tmax)
+generate_table(plotname = "/home/lee/example", dataframe = blogsville, y = "tmax")
 ```
 
-Next, let's consider how we can create these scatterplots. If you look at the explained variance table created by the generate_table function, you will see that out of all the predictor variables, humidity (humxx) has the highest correlation with maximum temperature. From this, let's look at how to create a scatterplot of humidity against maximum temperature:
+Next, let's consider how to create scatterplots of individual predictor/predictand relationships. If you look at the explained variance table created by the generate_table function, you will notice that out of all the predictor variables, humidity (humxx) has the highest correlation with maximum temperature. From this, let's look at how to create a scatterplot of humidity against maximum temperature:
 
 ```{r, fig.height = 6, fig.width = 6, fig.cap = "Scatterplot which displays the relationship between daily humidity and maximum temperature. We see from this plot that there is a fairly strong, positive relationship between these two variables."}
+# Produce a scatterplot of humidity vs. Maximum temperature 
+# from the blogsville dataframe using the plot function. Note that 
+# the first two inputs are the columns of the dataframe, and 
+# the rest are just convinient plotting options
 plot(blogsville$humxx, blogsville$tmax, xlab = "Humidity", 
      ylab = "Maximum Temperature", main = "Humidity vs. Maximum Temperature", 
      cex = .1)
+
+# Draw a line of the linear regression model overlayed on the 
+# scatterplot. 
 abline(lm(tmax ~ humxx, data = blogsville))
 ```
 <!-- bplot.xy(blogsville$humxx, blogsville$tmax) -->
 
-So now we have a way to repdresent all of the SDSM plots from screen variables in R. One thing to note about R is that it has very powerful graphics capabilities, which allow you to create many advanced, publication worthy figures. To give a flavor of this, we will show some of the other kinds of plots you can create with the blogsville data. First, let's look at how to visualize how maximum temperature changes throughout the dataset, by plotting it against time. 
+So now we have a way to represent all of the SDSM plots from screen variables in R. One thing to keep in mind about R is that it has very powerful graphics capabilities, which allow you to create many advanced, publication worthy figures. To give a flavor of this, we will show some of the other kinds of plots you can create with the blogsville data. First, let's look at how to visualize how maximum temperature changes throughout the dataset, by plotting it against time. 
 
-```{r, fig.height=7, fig.width=7}
+```{r, fig.height=7, fig.width=7, fig.show='hold'}
 # Pull out the year our of the dates column in R, and 
 # then add a variable to the dataframe which represents 
 # the the three different decades. 
@@ -93,9 +101,9 @@ blogsville <- blogsville[, 1:8]
 ```
 
 # Model Calibration
-Next, we will see how to use the blogsville data frame in order to build a statistical model. This is the same stage as the Calibrate model section of the SDSM tool, and we will use the same predictor variables that the SDSM manual uses in their blogsville example. We also follow the convention blogsville example in the SDSM manual by splitting our dat into training and testing datasets, using the former for model building and the latter for validation. 
+Next, we will see how to use sdsmR and the blogsville data-set to build a statistical model. This is the same stage as the Calibrate model section of the SDSM tool, and we will use the same predictor variables used in the manual. We also follow the convention from the blogsville example in the SDSM manual by splitting our dat into training and testing datasets, using the former for model building and the latter for validation. 
 
-First, we will show how to fit a annual model using the blogsville example, and that the values derived from this are identical to what you would have obtained from the SDSM tool. However, we can see from the above figure that maximum temperature is very dependent on time, and we will see in the next section how to fit both monthly and seasonal models, as well as include an autoregressive term. 
+First, we will show how to fit a annual model using the blogsville example, and that the values derived from this are identical to what you would have obtained from the SDSM tool. 
 
 ```{r}
 # Split the dataset in half into training and testing 
@@ -118,8 +126,12 @@ summary(blogsville_annual_model)$r.squared
 summary(blogsville_annual_model)$sigma
 ```
 
+One issue with the annual model is that we see from the maximum temperature figure above that temperature is heavily dependent on the times of year. In SDSM, one usually combats this by fitting seperate models either by season, or by month. In the next section, we will show how to do this both manually and with the `?calibrate_model` function. 
+
+
 ## Monthly and Seasonal Models 
-Now that we have seen how to fit our annual model using R, let's delve into how we can create more complicated models. In SDSM, one of the most important options is the ability to specify whether you want annual, monthly, or seasonal models. If you choose a monthly or seasonal model, what SDSM does is fit a seperate linear model for each time period. For example, if you select monthly, SDSM will return a seperate linear model for january, february, march, etc... Carrying out this step in R is a bit complex, but certainly feasible. We will first show you how to manually fit monthly/seasonal models in R, then we will introduce the calibrate_model function which comes with the sdsmR package, which will automate this step for you!
+
+Now that we have seen how to fit our annual model using R, let's delve into how we can create more complicated models. In SDSM, one of the most important options is the ability to specify whether you want annual, monthly, or seasonal models. If you choose a monthly or seasonal model, what SDSM does is fit a seperate linear model for each corresponding time period. For example, if you select monthly, SDSM will return a seperate linear model for january, february, march, etc... Carrying out this step in R is a bit complex, but certainly feasible. We will first show you how to manually fit monthly/seasonal models in R, then we will introduce the `calibrate_model` function, which will automate this step for you!
 
 ```{r}
 # Get a list of the months in our dataframe and add a column 
@@ -177,11 +189,15 @@ for (s in unique(blogsville$season)) {
 # that they ae indeed the same. 
 print(month_r2)
 print(season_r2)
+
+# Take the monthly and seasonal models out of the blogsville dataframe 
+blogsville <- blogsville[, 1:8]
 ```
 
-Above is a way to compute a seperate linear model for either each month, or each season. Note that we have stored these models inside a list, which is one of R's fundamental data structures. To access one of these models, simply type `season_mods$winter` or `month_mods[[1]]`, and to view a summary of one of these models, type `summary(season_mods$winter)`. 
+Above is a way to compute a seperate linear model for either each month, or each season. Note that we have stored these models inside a list, one of R's fundamental data structures. To access one of these models, simply type `season_mods$winter` or `month_mods[[1]]`, and to view a summary of one of these models, type `summary(season_mods$winter)`. 
 
-An alternative to using the code above to store linear models would be the calibrate_model function, which comes with the sdsmR package. It works the same way as above, storing each model in a list. Notice how the output of this model is similar to the way we calibrated the model above, and we can pull this informartion out with the summarize models function
+An alternative to using the code above to store linear models would be the calibrate_model function, which comes with the sdsmR package. It works the same way as above, storing each model in a list. Notice how the output of this model is similar to the way we calibrated the model above.  We can pull this informartion out with the `?summarize_models` function, which also comes with the sdsmR package. 
+
 
 ```{r}
 # Fit a blogsville model using the calibrate model function. Note that 
@@ -195,9 +211,9 @@ print(blogsville_summary)
 ```
 
 # Weather Generator 
-Now that the have our models built, we will show how to produce the equivalent of the weather generator section of the SDSM tool. Generally, this section is used to verify calibrated models, so we will use our testing data-set defined above to generate the local weather and see how well the model performs. Recall that we split the blogsville data-set into a training and testing halves, the first form 1960-1975, and the second from 1976-1990. We build our model using the training portion, and we will now evaluate our model using the test set. 
+Now that we can calibrate our models, we will show how to produce the equivalent of the weather generator section of the SDSM tool. Generally, this section is used to verify calibrated models, so we will use our testing data-set defined above to see how well the model performs. Recall that we split the blogsville data-set into a training and testing halves, the first from 1961-1975, and the second from 1976-1990. We build our model using the training data, and will now evaluate our model using the test set. 
 
-SDSM adds white noise, ie: a normal random variable, onto all of its predictions in order to create ensembles of weather predictions. The reasoning behind generaing these ensembles is to closer match the variance of the observed and downscaled distributions. Next, we will show how to generate these ensembles manually using our annual model, and then show how to use the generate_weather function which comes with the sdsmR packge to perform the same calculations.  
+SDSM adds white noise, ie: a normal random variable, onto all of its predictions in order to create ensembles of weather predictions. The reasoning behind generaing these ensembles is to closer match the variance of the observed and downscaled distributions. Next, we will show how to generate these ensembles manually using our annual model, and then show how to use the `?generate_weather` function to perform the same calculations. 
 
 ```{r, fig.cap= "testing", fig.height = 7, fig.width = 7}
 # Use the predict.lm function in R with our annual model, 
@@ -223,13 +239,8 @@ ensembles <- white_noise + weather
 head(ensembles[, 1:6])
 ``` 
 
-Similar to the other sections, we have created an R function, 
-called generate_weather, which mimics the functionality of the above 
-code chunk for all models you can generate with calibrate_model. 
-With this function, you can use the output from the 
-calibrate_model function and a new dataframe as inputs,  
-and you will recieve a dataframe with the dates, exact predictions, 
-and specified number of ensembles. 
+Similar to the Model Calibration section, we have created an R function, `generate_weather`, which mimics the functionality of the above code chunk for models generated with `calibrate_model`. With this function, you can use the output from the calibrate_model function and a new dataframe as inputs, and you will recieve a dataframe with the dates, exact predictions, and specified number of ensembles. For more detailed information on generate weather, access the `?generate_weather` help file. 
+
 
 ```{r} 
 blogsville_preds <- generate_weather(models = blogsville_mod, 
@@ -240,8 +251,7 @@ head(blogsville_preds[, 1:6])
 
 
 ## Prediction Intervals 
-Next, we will show a different way of quantifying uncertainty in our downscaled predictions. Instead of adding random noise to the pointwise prediction generated from the calibrated model, we use a prediction interval, which comes straight from the regression equation. The reason to choose the interval approach instead of the ensembles is that it gives coverage guarantees: IE: approximately 95 percent of the prediction intervals will contain the true value. 
-In the following section, we show the R code which generates both the predictions and corresponding prediction intervals. Note that the actual predictions are the same whether you're generating predictions intervals or using ensembles (check this with `all.equal(as.numeric(weather), blogsville_preds$predictions)`), but what is different is how we are quantifying the uncertainty. 
+Next, we will show a different way of quantifying uncertainty in our downscaled predictions. Instead of adding random noise to the pointwise prediction generated from the calibrated model, we use a prediction interval, which comes straight from the regression equation. The reason to use the interval approach instead of the ensembles is that it gives coverage guarantees: IE: approximately 95 percent of the prediction intervals will contain the true value. In the following section, we show the R code which generates both the predictions and corresponding prediction intervals. Note that the actual predictions are the same whether you're generating predictions intervals or using ensembles (check this with `all.equal(as.numeric(weather), blogsville_preds$predictions)`), but what is different is how we are quantifying the uncertainty. 
 
 ```{r}
 # Specify the interval = "prediction" option in predict.lm to 
@@ -293,14 +303,11 @@ points(test$dates[1:365], test[1:365, "tmax"], cex = 1,
        col = "black", pch = 16)
 ```
 
-As we can see, both options do a fairly good job giving a range of weather to expect in observations not used by the training dataset. However, we do notice that niether does a great job capturing the extremely hot days, which occur around the middle of July. 
+As we can see, both options do a fairly good job providing a range of weather to expect in future years. However, we do notice that niether does a great job capturing the extremely hot days, which occur around the middle of July. This is an issue with statistical downscaling, that it doesn't do a great job capturing extreme values. We will see more of this theme in the conditional models section. 
 
 # Scenario Generation 
-Finally, we arrive at the main section where we use GCM output to downscale local variables. In this case, we are using predictors from the HadCM3 experiment, which are the same one's that were included in the Blogsville SDSM manual. 
-Note that this process of generating scenario's from climate model scenario's is statistically the same as the generating weather function we used in the previous section. Howeve
-r, instead of using a test set of the NCEP data, we are using climate model output. Because of this, we can use the same generate_weather function to generate these different scenario's. The input requirements are that you must have a dataframe with the same predictor variable names that were used in the model calibration stage. 
-Below we will generate the scenario's from both 1961-1990 and 2070-2099, along with thir corresponding uncertainty. We will show that, as expected from climate change, the maximum temperatures are expected to be higher in Blogsville in 2070-2099 compard with 1961-1990. Note that similar to the blogsville data, the climate model output comes with the sdsmR package, so we can just load it into R's workspace automatically. 
 
+Finally, we arrive at the main section where we use GCM output to downscale local variables. In this case, we are using predictors from the HadCM3 experiment, the same variables included in the Blogsville SDSM manual. Note that the process of generating scenario's from climate model output is statistically the same as the `generate_weather` function we used in the previous section. However, instead of using a testing set of the NCEP re-analysis data, we are using climate model output to guide the predictions. Since the statistical calculation is the same, we can use the `generate_weather` function to calculate these different scenario's. The input requirements are that you must have a dataframe with the same predictor variable names that used in the model calibration stage. Below we will generate the scenario's from both 1961-1990 and 2070-2099, along with thir corresponding uncertainty. We will show that, as expected from climate change, maximum temperatures are expected to be higher on average in Blogsville in the 2070-2099 time period. Note that similar to the blogsville data, the climate model output comes with the sdsmR package, so we can just load it into R's workspace automatically. 
 
 ```{r, fig.show='hold'}
 # Load in the climate model output for the two time periods. Recall
@@ -421,6 +428,23 @@ In this document, we've shown how to implement the main functionality of statist
 2. Calbrate Model
 3. Weather Generator
 4. Scenario Generator
+
+To demonstrate the utility of the package in performing statistical downscaling, let's look at how concise the statistical downscaling process can be made utilizing sdsmR. In this example, we will simply downscale maximum temperature, using a monthly model and an autoregressive term. 
+
+
+```{r, eval = FALSE}
+# Screen Variables ---------------
+generate_table(plotname = "/home/lee/blogsville_demo", dataframe = blogsville, y = "tmax")
+
+# Calibrate Model -----------------
+demo_mod <- calibrate_model(dataframe = train, y = "tmax", model_type = "monthly", autoregression = "true")
+
+# Weather Generator ---------------
+demo_test <- generate_weather(models = demo_mod, new_dataframe = test)
+
+# Scenario Generator -------------
+demo_scenario <- generate_weather(models = demo_mod, new_dataframe = weather_2070)
+````
 
 While building the tool, we've taken great care to include all of the options that are familiar to users of the SDSM tool, such as fitting monthly/seasonal models, including an autoregressive term, generating the same tables, etc..
 
