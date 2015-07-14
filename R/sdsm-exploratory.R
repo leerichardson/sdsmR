@@ -46,13 +46,13 @@ name_lookup <- function(filename){
     return(var.name)
 }
 
-compute_error <- function(predictions, observations, type = "regression"){
+compute_error <- function(predictions, observed, type = "regression"){
     if (type == "regression") {
         rmse <- sqrt(sum((predictions - observed)^2)/length(predictions))
         mae <- sum(abs(predictions - observed))/length(predictions)
         return(list(rmse=rmse, mae=mae))
     } else if (type == "classification") {
-        abs_error <- sum(abs(predictions - observations))/length(predictions)
+        abs_error <- sum(abs(predictions - observed))/length(predictions)
         return(abs_error)
     }
 }
@@ -233,3 +233,13 @@ generate_table <- function(plotname, dataframe, y = "empty", conditional = FALSE
     return(results)
 }
 
+# Function to compute a movinf average of a given length
+rollmean <- function(x, n) {
+    out <- rep(NA, length(x))
+
+    offset <- trunc(n / 2)
+    for (i in (offset + 1):(length(x) - n + offset + 1)) {
+        out[i] <- mean(x[(i - offset):(i + offset - 1)])
+    }
+    return(out)
+}

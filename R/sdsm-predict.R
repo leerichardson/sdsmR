@@ -172,7 +172,7 @@ generate_weather <- function(models, new_dataframe, uncertainty = "ensemble",
         return(final_df[order_by_date,])
     } else if (uncertainty == "ensemble" & num_ensembles > 1) {
         average_sigma <- mean(unlist(lapply(models,
-                                        function(x) summary(x)$sigma)))dd
+                                        function(x) summary(x)$sigma)))
         ensembles <- generate_ensembles(final_df$predictions,
                         num_ensembles, sigma = mean(average_sigma))
         final_with_ensembles <- cbind(final_df, ensembles)
@@ -252,5 +252,4 @@ predict_conditional <- function(dataframe, lm1, lm2, num_ensembles) {
         return(ensemble_preds)
     }
 }
-
 

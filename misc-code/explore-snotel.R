@@ -20,6 +20,7 @@ niwot_predictors <- cbind(date, niwot_predictors)
 # the two datasets that we merged together!
 niwot <- merge(niwot_data, niwot_predictors, by = "date",
                all.x = TRUE, sort = TRUE)
+write.csv(niwot[, 2:ncol(niwot)], "/home/lee/Dropbox/work/ncar/data/snotel/niwot.csv", row.names = FALSE)
 rm(niwot_data, niwot_predictors)
 
 # Exploratory Analysis -------------------------------------------
@@ -46,30 +47,25 @@ generate_table("/home/lee/niwot", niwot, y = "swe")
 
 # Look into the relationship between precipitation accumulation
 # and snow water equivalent.
-plot_index <-3288:(3288 + 365)
+plot_index <- 5850:9000
 plot(niwot$date[plot_index], niwot$swe[plot_index], cex = .5,
-     pch = 16, ylim = c(0, 70))
+     pch = 16, ylim = c(0, 40), main = "Snow Water Equivalent in Niwot from 1980 - 2015",
+     xlab = "", ylab = "Snow Water Equivalent", type = "l")
 lines(niwot$date[plot_index], niwot$precip_accum[plot_index],
       col = "blue", lwd = 3)
 lines(niwot$date[plot_index], niwot$temp_avg[plot_index],
       col = "red", lwd = .5)
 
-# Variable Selection/Modleing -----------------------
-
-# Split the dataframe into training and testing
-# datasets.
-train <- split_dataframe(niwot)$train
-test <- split_dataframe(niwot)$test
-observed <- test[, "swe"]
-
-
+# Look into the relationship with SWE and other promising
+# variables
+pi <- 1:1000
+plot(niwot$date[pi], scale(niwot$swe)[pi], ylim = c(-3, 3), type = "l")
+lines(niwot$date[pi], niwot$hgt_150_lag[pi], col = "blue")
+lines(niwot$date[pi], niwot$air_300_lag[pi], col = "green")
+lines(niwot$date[pi], scale(niwot$temp_avg)[pi], col = "purple")
 
 
-
-
-
-
-
+# Downscale temperature and precipitation -----------------
 
 
 
