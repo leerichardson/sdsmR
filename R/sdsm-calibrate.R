@@ -40,7 +40,7 @@ add_autoregression <- function(dataframe, response_name) {
     response <- ts(dataframe[, response_name])
     lagged <- lag(response, -1)
     tmp = cbind(lagged, response)
-    lagged_vec <- tmp[1:(nrow(tmp) - 1),1]
+    lagged_vec <- tmp[1:(nrow(tmp) - 1), 1]
     dataframe$autoregression <- lagged_vec
     return(dataframe)
 }

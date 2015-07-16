@@ -64,11 +64,3 @@ lines(niwot$date[pi], niwot$hgt_150_lag[pi], col = "blue")
 lines(niwot$date[pi], niwot$air_300_lag[pi], col = "green")
 lines(niwot$date[pi], scale(niwot$temp_avg)[pi], col = "purple")
 
-
-# Downscale temperature and precipitation -----------------
-
-
-
-
-
-
