@@ -1,10 +1,11 @@
-#' Make predictions using calibrated models and a new data frame
+#' Make predictions using calibrated models and a new data frame.
 #'
 #' This function is meant to be used after running the calibrate_models
-#' function. The idea is that it checks the model type, and then works
-#' through the different subsets of the new dataframe to make predictions,
-#' and returnsa data frame with dates, and predictions, and ensembles
-#' of predictions if that option has been specified.
+#' function. The idea is that it checks the model type, and based on this
+#' information it makes the appropriate predictions. generate_Weather
+#' returns a data frame with dates, and predictions, and either ensembles
+#' or prediction intervals if that option has been specified. Note that you can't
+#' produce prediction intervals for conditional models.
 #'
 #' @export
 #'

@@ -85,6 +85,7 @@ calibrate_model <- function(dataframe, y, model_type = "annual",
     }
 
 
+
     # Grab the date column and response variable column names from the inputs.
     # These will be used later in various convinient ways, such as indexing the
     # dataframe when needed.

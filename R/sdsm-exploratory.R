@@ -64,14 +64,14 @@ split_dataframe <- function(dataframe, percentage = .6){
     return(list(train = train, test = test))
 }
 
-
 #' Generate diagnostic tables for predictors and predictands.
 #'
 #' This function is meant to replicate the screen variables
-#' section of the SDSM tool. It creates two plots, the table
-#' which shows the correlations between predictors in all individual
-#' months and annually, as well as the correlations between
-#' predictor variables in all months.
+#' section of the SDSM tool. It creates two plots, the first is a
+#' table which shows the correlations between predictors both annually
+#' and in each month. The second table shows the correlations between
+#' predictor and prectand variables in all months. Note that these tables
+#' are the same as those produced in the SDSM tool.
 #'
 #' @export
 #'

@@ -49,13 +49,15 @@ for (year in year_index) {
         temp_df[1:length(temp), count] <- temp
         colnames(temp_df)[count] <- paste0("year_", year)
 
-
+        print(year)
         if (count == 1) {
-            plot(data$swe, type = "l", ylim = c(0, 30), col = sample(colours(), 1),
+            browser()
+            date_range <- data$date
+            plot(date_range, data$swe, type = "l", ylim = c(0, 30), col = sample(colours(), 1),
                  main = "SWE Trajectories in Niwot from 1980-2015",
-                 xlab = "Day of Year", ylab = "Snow Water Equivalent")
+                 xlab = "", ylab = "Snow Water Equivalent")
         } else {
-            lines(data$swe, type = "l", ylim = c(0, 30), col = sample(colours(), 1))
+            lines(date_range, data$swe, type = "l", ylim = c(0, 30), col = sample(colours(), 1))
         }
     }
 }
@@ -115,6 +117,7 @@ legend("topleft", c("duration", "peaks", "first_days"),
 # Check the correlations
 param_matrix <- matrix(c(duration, peaks, first_days), ncol = 3, nrow = length(duration))
 cor(param_matrix)
+
 
 # Estimate Parameters ------------------
 corresponding_value <- function(x, index) {

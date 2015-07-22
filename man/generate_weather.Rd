@@ -18,6 +18,9 @@ be made from the calibrated models.}
 
 \item{num_ensembles}{If uncertainty = "ensembles", then this specifies
 how many ensembles to return. Default is set to one.}
+
+\item{If}{sing an autoregressive model, you must specify the
+response variable.}
 }
 \value{
 A two column dataframe with dates and predicted weather. The dataframe

@@ -28,7 +28,7 @@ rm(niwot_data, niwot_predictors)
 # Plot all of the variables over a two year period to see
 # their overall relationship
 par(mfrow = c(2,3))
-plot_index <- 3288:5000
+plot_index <- 3288:8000
 plot_dates <- niwot$date[plot_index]
 plot(plot_dates, niwot$swe[plot_index], main = "Snow Water Equivalent")
 plot(plot_dates, niwot$precip_accum[plot_index], main = "Precipitation Accumulation")
@@ -40,6 +40,11 @@ plot(plot_dates, niwot$temp_avg[plot_index],
 plot(plot_dates, niwot$temp_min[plot_index],
      main = "Minimum Temperature", ylim = c(-5, 90))
 par(mfrow = c(1, 1))
+
+# Plot just the Snow Trend
+plot(plot_dates, niwot$swe[plot_index], main = "Snow Water Equivalent Pattern",
+     type = "l", xlab = "", ylab = "Snow Water Equivalent")
+
 
 # Use the generate_table function which comes with the sdsmR
 # package in order to explore the
@@ -63,4 +68,58 @@ plot(niwot$date[pi], scale(niwot$swe)[pi], ylim = c(-3, 3), type = "l")
 lines(niwot$date[pi], niwot$hgt_150_lag[pi], col = "blue")
 lines(niwot$date[pi], niwot$air_300_lag[pi], col = "green")
 lines(niwot$date[pi], scale(niwot$temp_avg)[pi], col = "purple")
+
+
+niwot_08 <- subset(niwot, year %in% c(2008:2009))
+plot(niwot_08$date, niwot_08$swe, ylim = c(0, 25), pch = 16, cex = .5,
+     main = "Precip Accumulation Less than Snow in 2008",
+     xlab = "Time", ylab = "Snow Water Equivalent")
+lines(niwot_08$date, niwot_08$precip_accum, col = "blue", lwd = 2)
+
+# Swe Precip general trend
+niwot_08 <- subset(niwot, year %in% c(1990:2000))
+plot(niwot_08$date, niwot_08$swe, ylim = c(0, 32), pch = 16, cex = .5,
+     main = "Relationship between Snow Water Equivalent and Precipitation", xlab = "Time", ylab = "Snow Water Equivalent")
+lines(niwot_08$date, niwot_08$precip_accum, col = "blue", lwd = 2)
+
+
+# # Plot Temperature During Peaks ------------------------------
+# # Plot the profile of Temperature during the peak Snowfall in
+# # the Niwot data-frame.
+# periods <- unique(niwot$period[!is.na(niwot$period)])
+# decline_indices <- matrix(NA, nrow = 11, ncol = length(periods))
+# for (i in seq_along(periods)) {
+#     period_peak <- find_period_peak(dataframe = niwot, per = i, peak_var = "swe")
+#     indices <- indices_window(period_peak)
+#     decline_indices[, i] <- indices
+# }
+#
+#
+# count <- 0
+# smooth_temps <- rollmean(x = niwot[, "temp_avg"], n = 3)
+# for (i in seq_along(periods)) {
+#     plot_index <- decline_indices[, i]
+#
+#     # Skip if the temperature here has any NA's
+#     smooth_temp <- smooth_temps[plot_index]
+#     if (sum(is.na(smooth_temp)) > 8) {
+#         next
+#     }
+#
+#     print(smooth_temp)
+#     count <- count + 1
+#     if (count == 1) {
+#         plot(1:length(plot_index), smooth_temp, ylim = c(15, 55),
+#              type = "l", col = sample(colours()[73:110], 1),
+#              main = "Smooth Temperature During Peak SWE", ylab = "Smooth Temperature",
+#              xlab = "Day's surrounding Peak SWE")
+#     } else {
+#         lines(1:length(plot_index), smooth_temp,
+#               col = sample(colours()[73:110], 1))
+#     }
+# }
+# abline(v = 6, lwd = 3)
+#
+# rm(decline_indices, count, i, start_per_25, relevant_months, monthly_means,
+#    period_parameters, sparse_preds, peak_months, per, dates, indices, )
 

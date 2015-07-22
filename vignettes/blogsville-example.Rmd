@@ -16,9 +16,9 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.height = 7, fig.width
 
 # Introduction
 
-In this document, we will walk through how to perform statistical downscaling, such as the kind performed by the Statistical Downscaling Model (SDSM) tool, in the R language. Statistical downscaling is a method of relating large scale variables, such as those from General Circulation Model (GCM) output, to local, typically pointwise variables. Statistical downscaling provides a method for performing local impact studies, such as assessing the risk of flooding in a particular city under different climate change scenario's. At a high level, what's being done is building a statistical model of the relationship between large scale variables (for example, temperature in a 50 x 50 km gridbox) and local variables using re-analysis data, and then using this statistical relationship to generate scenario's for how the local variable responds to various climates. 
+In this document, we will walk through how to perform statistical downscaling, such as the kind performed by the Statistical Downscaling Model (SDSM) tool, in the R language. Statistical downscaling is a method of relating large scale variables, such as those from General Circulation Model (GCM) output, to locally observed variables. Statistical downscaling provides a method for performing local impact studies, such as assessing the risk of flooding in a particular city under different climate change scenario's. At a high level, what's being done is building a statistical model of the relationship between large scale variables (for example, temperature in a 50 x 50 km gridbox) and local variables using re-analysis data. Then, we use this statistical relationship to predict how the local variable responds to various climate scenario's.  
 
-We will walk through the Blogsville example used in the SDSM manual, and show how you can perform these calculations in the R language. Also, we will show how you can use various functions provided by the sdsmR package to accelerate the process. 
+We will walk through the Blogsville example used in the SDSM manual, and show how you can perform these calculations in the R language. Also, we will show how you can use various functions provided by the sdsmR package to accelerate this process. 
 
 # Exploratory Data Analysis 
 
@@ -67,7 +67,6 @@ plot(blogsville$humxx, blogsville$tmax, xlab = "Humidity",
 # scatterplot. 
 abline(lm(tmax ~ humxx, data = blogsville))
 ```
-<!-- bplot.xy(blogsville$humxx, blogsville$tmax) -->
 
 So now we have a way to represent all of the SDSM plots from screen variables in R. One thing to keep in mind about R is that it has very powerful graphics capabilities, which allow you to create many advanced, publication worthy figures. To give a flavor of this, we will show some of the other kinds of plots you can create with the blogsville data. First, let's look at how to visualize how maximum temperature changes throughout the dataset, by plotting it against time. 
 
@@ -431,16 +430,15 @@ In this document, we've shown how to implement the main functionality of statist
 
 To demonstrate the utility of the package in performing statistical downscaling, let's look at how concise the statistical downscaling process can be made utilizing sdsmR. In this example, we will simply downscale maximum temperature, using a monthly model and an autoregressive term. 
 
-
 ```{r, eval = FALSE}
 # Screen Variables ---------------
 generate_table(plotname = "/home/lee/blogsville_demo", dataframe = blogsville, y = "tmax")
 
 # Calibrate Model -----------------
-demo_mod <- calibrate_model(dataframe = train, y = "tmax", model_type = "monthly", autoregression = "true")
+demo_mod <- calibrate_model(dataframe = blogsville[, -8], y = "tmax", model_type = "monthly")
 
 # Weather Generator ---------------
-demo_test <- generate_weather(models = demo_mod, new_dataframe = test)
+demo_test <- generate_weather(models = demo_mod, new_dataframe = blogsville)
 
 # Scenario Generator -------------
 demo_scenario <- generate_weather(models = demo_mod, new_dataframe = weather_2070)
