@@ -64,6 +64,17 @@ split_dataframe <- function(dataframe, percentage = .6){
     return(list(train = train, test = test))
 }
 
+# Function to compute a moving average of a given length
+rollmean <- function(x, n) {
+    out <- rep(NA, length(x))
+
+    offset <- trunc(n / 2)
+    for (i in (offset + 1):(length(x) - n + offset + 1)) {
+        out[i] <- mean(x[(i - offset):(i + offset - 1)])
+    }
+    return(out)
+}
+
 #' Generate diagnostic tables for predictors and predictands.
 #'
 #' This function is meant to replicate the screen variables
@@ -231,15 +242,4 @@ generate_table <- function(plotname, dataframe, y = "empty", conditional = FALSE
 
     # Return the correlation matrix
     return(results)
-}
-
-# Function to compute a movinf average of a given length
-rollmean <- function(x, n) {
-    out <- rep(NA, length(x))
-
-    offset <- trunc(n / 2)
-    for (i in (offset + 1):(length(x) - n + offset + 1)) {
-        out[i] <- mean(x[(i - offset):(i + offset - 1)])
-    }
-    return(out)
 }

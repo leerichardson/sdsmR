@@ -1,4 +1,4 @@
-# Cleaning/Tidying the data ----------------------------
+g# Cleaning/Tidying the data ----------------------------
 
 # Download the NIWOT dataset from the online link
 niwot_url <- "http://www.wcc.nrcs.usda.gov/reportGenerator/view_csv/customSingleStationReport/daily/663:CO:SNTL%7Cid=%22%22%7Cname/POR_BEGIN,POR_END/WTEQ::value,PREC::value,TMAX::value,TMIN::value,TAVG::value,PRCP::value"
@@ -10,6 +10,12 @@ niwot_data <- read.csv("/home/lee/Dropbox/work/ncar/data/snotel/niwot_snotel",
 niwot_data$Date <- as.Date(niwot_data$Date)
 colnames(niwot_data) <- c("date", "swe", "precip_accum", "temp_max", "temp_min",
                           "temp_avg", "precip_inc")
+
+narcaap_preds <- read.csv("/home/lee/Dropbox/work/ncar/data/snotel/niwot_site/niwot_narcaap.csv")
+complete_columns <- unlist(lapply(narcaap_preds, function(x) any(!is.na(x))))
+narcaap_preds <- narcaap_preds[, complete_columns]
+date <- seq(as.Date("1979-01-01"), by = 1, len = nrow(narcaap_preds))
+narcaap_preds$date <- date
 
 # Read in the niwot predictor variables
 niwot_predictors <- read.csv("/home/lee/Dropbox/work/ncar/data/snotel/niwot.csv")

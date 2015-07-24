@@ -104,11 +104,12 @@ library(magrittr)
 
 # Use these monthly and yearly variables to obtain the monthly
 # averages for our covariates of interest.
-monthly_means <- select(niwot, date, year, month, period, precip_accum, precip_inc, temp_avg) %>%
+monthly_means <- select(niwot, date, year, month, period, precip_inc, temp_avg, swe) %>%
                     group_by(year, month, period) %>%
                         summarise(temp = mean(temp_avg, na.rm = TRUE),
-                                  precip_accum = mean(precip_accum, na.rm = TRUE),
-                                  precip_inc = mean(precip_inc, na.rm = TRUE))
+                                  precip_inc = mean(precip_inc, na.rm = TRUE),
+                                  peaks = max(swe),
+                                  first_day = find_first(swe))
 
 
 period_parameters <- select(niwot, date, year, month, swe, period, precip_accum, precip_inc, temp_avg) %>%
@@ -259,6 +260,7 @@ prec <-niwot[which(niwot$period == 30), "precip_accum"]
 start_prediction <- predict_swe_start(temp_vec = temp, precip_vec = prec, model = lma)
 peak_prediction <- predict_swe_peak(temp_vec = temp, precip_vec = prec, model = lmb)
 
+
 # Function which takes in a precipitation vector, temperature
 # vector, and compute what SWE would look like over the course
 # of the year.
@@ -328,4 +330,3 @@ plot(test$date, observed, ylim = c(0, 25), pch = 16, cex = .5,
 lines(test$date, swe_test, col= "blue", lwd = 1.5)
 legend("topleft", c("Functional Model", "Thin Plate Spline"), col = c("blue", "red"), lwd = 3)
 compute_error(predictions = swe_test, observed = observed)
-

@@ -112,6 +112,7 @@ combine_files <- function(type = "directory", file_list = NULL,
 # Function to combine the CSV's into one giant dataframe
 combine_csvs <- function(input_dir, output_dir,
                          csv_name = "combined_df.csv") {
+    # Get a list of all the files inside an input diretory
     files <- list.files(input_dir)
 
     # Pull the number of expected rows from a given file. We
@@ -236,5 +237,46 @@ get_ncep_vars <- function(input_dir = "/glade/p/image/rmccrary/NCEP2/",
         }
     }
 
+    combine_csvs(input_dir = output_dir, output_dir = "/glade/p/work/lrich/", csv_name = "combined_df.csv")
+}
+
+get_narcaap_vars <- function(input_dir = "/glade/p/image/rmccrary/narccap/T6/NCEP2/CRCM/ncep/",
+                                      output_dir = "/glade/p/work/lrich/ncep_vars/narcaap/",
+                                      latitude, longitude) {
+
+    # Make sure that the ncdf4 package is installed before someone runs
+    # this function.
+    if (!requireNamespace("ncdf4", quietly = TRUE)) {
+        stop("ncdf4 package needed for this function to work. Please install",
+             call. = FALSE)
+    }
+
+    # Check to see if the directory already exists. If yes, recursively
+    # remove it and start an empty directory for saving the file
+    # If no, then create the directory and start saving the files here.
+    if (file.exists(output_dir)) {
+        unlink(output_dir, recursive = TRUE)
+        dir.create(output_dir)
+    } else {
+        dir.create(output_dir)
+    }
+
+    # Get a list of all th filenames in which we want to
+    # pull the time series data from
+    filenames <- list.files(input_dir)
+
+    # Loop through each file, extract the time series, save
+    # the time series inside the output directory
+    for (file in filenames) {
+        print(file)
+        ts <- pull_timeseries(ncdf_filename = paste0(input_dir, file),
+                              lat = latitude, lon = longitude)
+        norm_ts <- (ts - mean(ts))/sd(ts)
+        split_name <- unlist(strsplit(file, "_"))
+        var_name <- split_name[1]
+        level <- gsub("\\..*$", "", split_name[4])
+        write.csv(norm_ts, paste0(output_dir, var_name, "_", level, ".csv"),
+                  row.names = FALSE)
+    }
     combine_csvs(input_dir = output_dir, output_dir = "/glade/p/work/lrich/", csv_name = "combined_df.csv")
 }

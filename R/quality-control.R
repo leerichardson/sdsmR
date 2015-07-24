@@ -1,4 +1,3 @@
-# Check to make sure that
 check_dataframe <- function(dataframe) {
     if (class(dataframe) != "data.frame") {
         stop("Data must be in a dataframe!")
@@ -15,6 +14,13 @@ check_date <- function(dataframe) {
     print("Verified Date Column")
 }
 
+check_missing <- function(dataframe) {
+    num_complete <- sum(complete.cases(dataframe))
+    if (num_complete != nrow(dataframe)) {
+        stop("Data has missing values.")
+    }
+}
+
 #' Check to make sure the data-set is appropriate for sdsmR.
 #'
 #' This function is meant to replicate the quality control
@@ -24,7 +30,7 @@ check_date <- function(dataframe) {
 #'
 #' @export
 #'
-#' @param dataframe The name you want to save the plots as. IE
+#' @param dataframe The name you want to save the plots as. Ie:
 #' if your data comes from the blogsville data-set, you might
 #' want to call this "blogsville". If you want to save the plot
 #' in a different directory, just specify this in this name:
@@ -41,4 +47,5 @@ check_date <- function(dataframe) {
 quality_control <- function(dataframe) {
     check_dataframe(dataframe)
     check_date(dataframe)
+    check_missing(dataframe)
 }

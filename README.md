@@ -1,13 +1,12 @@
 # sdsmR Package
-R Package for Statistical Downscaling
+## R Package for Statistical Downscaling
 
-The purposes of this package is to move the functionality of the widely used 
+The purpose of this package is to move the functionality of the widely used 
 Statistical Downscaling Model (SDSM) tool into the R language. This is useful 
 because R as a language already has most of the SDSM functionality built into it, 
-and provides many more advanced statistical and graphics options. It also avoids the issues
+and provides more advanced statistical and graphics options. It also avoids the issues
 of SDSM only working on Windows machines, and moves downscaling from a point and 
-click interface towards a more programma
-
+click interface towards a more programmatic setting. 
 
 ## Installation
 This package is not yet on CRAN. To install the development version seen here, 

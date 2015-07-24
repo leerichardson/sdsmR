@@ -1,13 +1,9 @@
 # Functions to find the Parameters used for the functional
 # model of Snow. Used to estimate the peak, max, and duration.
 find_first <- function(x) {
-    snow_days <- which(x > 0)
+    snow_days <- which(x > 0.2)
     first_day <- min(snow_days)
     return(first_day)
-}
-
-find_peak <- function(x) {
-    returnma
 }
 
 find_peak_index <- function(x, first_day = 97, func = max) {
@@ -105,76 +101,112 @@ add_period <- function(dataframe) {
     dataframe <- dataframe[!is.na(dataframe$period), ]
 }
 
+generate_modeling_df <- function(dataframe) {
+    # Load in the packages for easy summary statistics.
+    library(tidyr)
+    library(dplyr)
+    library(magrittr)
 
-predict_swe_peak <- function(temp_vec, precip_vec, model) {
-    # Grab the months based on the length of the temp and
-    # precipitation vectors (if it's a leap year)
-    if (length(temp_vec) == 365) {
-        dates <- seq(as.Date("1981-07-01"), to = as.Date("1982-06-30"), by=1)
-        month_vec <- format.Date(dates, "%m")
-    } else if (length(temp_vec == 366)) {
-        dates <- seq(as.Date("1979-07-01"), to = as.Date("1980-06-30"), by=1)
-        month_vec <- format.Date(dates, "%m")
-    }
+    # Use these monthly and yearly variables to obtain the monthly
+    # averages for our covariates of interest.
+    monthly_means <- select(dataframe, date, month, period, precip_inc, temp_avg, swe) %>%
+        group_by(month, period) %>%
+        summarise(cov_temp = mean(temp_avg, na.rm = TRUE),
+                  cov_prec = mean(precip_inc, na.rm = TRUE))
 
-    month_vec <- as.numeric(month_vec)
-    dataframe <- as.data.frame(cbind(month_vec, temp_vec, precip_vec))
-    monthly_temps <- aggregate(formula = temp_vec ~ month_vec, data = dataframe, FUN = mean)
-    monthly_precip <- aggregate(formula = precip_vec ~ month_vec, data = dataframe, FUN = mean)
 
-    model_names <- names(model$coefficients)
-    newdf <- c(monthly_temps[, 2], monthly_precip[, 2])
-    cov_names <- c(paste0("temp", 1:12), paste0("prec_acc", 1:12))
-    covs <- which(cov_names %in% model_names)
+    period_parameters <- select(dataframe, date, year, month, swe, period, precip_accum, precip_inc, temp_avg) %>%
+        group_by(period) %>%
+        summarise(peaks = max(swe),
+                  first = find_first(swe))
 
-    # Fit the input linear model using the monthly covariates
-    predictors <- data.frame(matrix(newdf[covs], nrow = 1, ncol = length(covs)))
-    names(predictors) <- cov_names[covs]
-    peak_pred <- predict(model, newdata = predictors)
+    # Combine the parameter data-frame with the covariate dataframe. Then
+    # Create a new modeling df which makes it easy to fir linear models
+    modeling_df <- merge(period_parameters, monthly_means, by = "period")
+    lm_df  <- modeling_df %>%
+        gather(Var, val, starts_with("cov")) %>%
+        unite(Var1, Var, month) %>%
+        spread(Var1, val)
+    colnames(lm_df) <- gsub("cov_", "", colnames(lm_df))
+    return(lm_df)
 }
 
+compute_monthly_covs <- function(temp_vec, precip_vec, date_vec = NULL) {
+    # Make sure that the temperature and precipitation vectors
+    # are the same
+    stopifnot(length(temp_vec) == length(precip_vec))
 
-predict_swe_start <- function(temp_vec, precip_vec, model) {
-    # Grab the months based on the length of the temp and
+    # Create a month vector based on the length of the temp and
     # precipitation vectors (if it's a leap year)
-    if (length(temp_vec) == 365) {
-        dates <- seq(as.Date("1981-07-01"), to = as.Date("1982-06-30"), by=1)
+    if (!is.null(date_vec)) {
+        month_vec <- format.Date(date_vec, "%m")
+    } else if (length(temp_vec) == 365) {
+        dates <- seq(as.Date("1981-07-01"), to = as.Date("1982-06-30"), by = 1)
         month_vec <- format.Date(dates, "%m")
     } else if (length(temp_vec == 366)) {
-        dates <- seq(as.Date("1979-07-01"), to = as.Date("1980-06-30"), by=1)
+        dates <- seq(as.Date("1979-07-01"), to = as.Date("1980-06-30"), by = 1)
         month_vec <- format.Date(dates, "%m")
+    } else {
+        stop("Vectors must be either 365 or 366 days!")
     }
 
+    # Use this monthly vector to obtain the monthly averages for
+    # both temperature and precipication
     month_vec <- as.numeric(month_vec)
     dataframe <- as.data.frame(cbind(month_vec, temp_vec, precip_vec))
     monthly_temps <- aggregate(formula = temp_vec ~ month_vec, data = dataframe, FUN = mean)
     monthly_precip <- aggregate(formula = precip_vec ~ month_vec, data = dataframe, FUN = mean)
 
-    model_names <- names(model$coefficients)
-    newdf <- c(monthly_temps[, 2], monthly_precip[, 2])
-    cov_names <- c(paste0("temp", 1:12), paste0("prec_acc", 1:12))
-    covs <- which(cov_names %in% model_names)
+    # Combine these monthly averages into a one row data-frame
+    # that can be used for making predictions on a model with the
+    # same covariate names
+    newvals <- c(monthly_temps[, 2], monthly_precip[, 2])
+    df <- data.frame(matrix(newvals, nrow = 1, ncol = length(newvals)))
+    cov_names <- c(paste0("temp_", 1:12), paste0("prec_", 1:12))
+    colnames(df) <- cov_names
+    return(df)
+}
 
-    # Fit the input linear model using the monthly covariates
-    predictors <- data.frame(matrix(newdf[covs], nrow = 1, ncol = length(covs)))
-    names(predictors) <- cov_names[covs]
+predict_swe_peak <- function(temp_vec, precip_vec, date_vec = NULL, model) {
+    # Compute the monthly covariates using this particular
+    # temp and precip
+    predictors <- compute_monthly_covs(temp_vec, precip_vec, date_vec)
+
+    # Use these predictors to make a prediction for the
+    # peak snowfall in this period
     peak_pred <- predict(model, newdata = predictors)
+    return(peak_pred)
+}
+
+predict_swe_start <- function(temp_vec, precip_vec, date_vec = NULL, model) {
+
+    # Compute the monthly covariates using this particular
+    # temp and recip vector
+    predictors <- compute_monthly_covs(temp_vec, precip_vec, date_vec)
+
+    # Use these predictors to make a prediction for the
+    # peak snowfall in this period
+    first_day_pred <- predict(model, newdata = predictors)
+    return(first_day_pred)
 }
 
 # Function which takes in a precipitation vector, temperature
 # vector, and compute what SWE would look like over the course
 # of the year.
-predict_swe_period <- function(temp_vec, precip_vec, decline_rate = .35,
-                               percent_snow = .9, first_day = 97, peak_model,
+predict_swe_period <- function(temp_vec, precip_vec, date_vec = NULL, decline_rate = .5,
+                               percent_snow = .9, first_day = 95, peak_model,
                                start_model) {
-    # Find the date in which the peak of the heat will occur
-    smooth_temp <- rollmean(x = temp_vec, n = 3)
-    peak_snow <- predict_swe_peak(temp_vec, precip_vec, peak_model)
-    first_day <- round(predict_swe_start(temp_vec, precip_vec, start_model), digits = 0)
-    print(first_day)
-    if (first_day < 92) {
-        first_day <- 93
-    }
+
+    # Estimate the parameters (first day and peak) for this particular
+    # period using the two linear models and temp + precip vectors.
+    peak_snow <- predict_swe_peak(temp_vec, precip_vec, date_vec, peak_model)
+    first_day <- floor(predict_swe_start(temp_vec, precip_vec, date_vec, start_model))
+
+    # Calculate Precip Accumulation after the first day has
+    # been estimated
+    zero_prec <- rep(0, first_day - 1)
+    prec_accum <- cumsum(prec[first_day:length(precip_vec)])
+    precip_vec <- c(zero_prec, prec_accum)
 
     # Loop through each one of the days and predict the SWE
     # at this given day
