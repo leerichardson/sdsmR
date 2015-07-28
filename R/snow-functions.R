@@ -238,3 +238,33 @@ predict_swe_period <- function(temp_vec, precip_vec, date_vec = NULL, decline_ra
     # Return the vector of SWE for this time period
     return(swe_results)
 }
+
+convert_names <- function(names) {
+    # Create a lookup table which maps the differences between
+    # narcaap and ncep names
+    narcaap_names <- c("div", "hus", "huss", "rhum", "rhums",
+                       "ta", "tas", "ua", "uas", "va", "vas",
+                       "vort", "zg", "ugeo", "vgeo")
+
+    ncep_names <- c("div", "shum", "shum.2m", "rhum", "rhum.2m",
+                   "air", "air.2m", "uwnd", "uwnd.10m", "vwnd",
+                   "vwnd.10m", "vort", "hgt", "ugeo", "vgeo")
+    lookup_table <- data.frame(narcaap = narcaap_names,
+                               ncep = ncep_names)
+
+    # Loop through each one of the column names and substitute
+    # in the varname from the correct format
+    new_names <- rep("", times = length(names))
+    for (name in seq_along(names)) {
+        cur_name <- names[name]
+        split_name <- unlist(strsplit(cur_name, "_"))
+        conv_name_index <- which(lookup_table[, "narcaap"] == split_name[1])
+        conv_name <- as.character(lookup_table[conv_name_index, "ncep"])
+        if (exists(split_name[3])) {
+            new_names[name] <- paste0(conv_name, "_", split_name[2], "_", split_name[3])
+        } else {
+            new_names[name] <- paste0(conv_name, "_", split_name[2])
+        }
+    }
+    return(new_names)
+}

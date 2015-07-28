@@ -11,12 +11,6 @@ niwot_data$Date <- as.Date(niwot_data$Date)
 colnames(niwot_data) <- c("date", "swe", "precip_accum", "temp_max", "temp_min",
                           "temp_avg", "precip_inc")
 
-narcaap_preds <- read.csv("/home/lee/Dropbox/work/ncar/data/snotel/niwot_site/niwot_narcaap.csv")
-complete_columns <- unlist(lapply(narcaap_preds, function(x) any(!is.na(x))))
-narcaap_preds <- narcaap_preds[, complete_columns]
-date <- seq(as.Date("1979-01-01"), by = 1, len = nrow(narcaap_preds))
-narcaap_preds$date <- date
-
 # Read in the niwot predictor variables
 niwot_predictors <- read.csv("/home/lee/Dropbox/work/ncar/data/snotel/niwot.csv")
 date <- seq(as.Date("1979-01-01"), by = 1, len = nrow(niwot_predictors))
@@ -52,20 +46,22 @@ plot(plot_dates, niwot$swe[plot_index], main = "Snow Water Equivalent Pattern",
      type = "l", xlab = "", ylab = "Snow Water Equivalent")
 
 
+
+
 # Use the generate_table function which comes with the sdsmR
 # package in order to explore the
 generate_table("/home/lee/niwot", niwot, y = "swe")
 
 # Look into the relationship between precipitation accumulation
 # and snow water equivalent.
-plot_index <- 5850:9000
-plot(niwot$date[plot_index], niwot$swe[plot_index], cex = .5,
-     pch = 16, ylim = c(0, 40), main = "Snow Water Equivalent in Niwot from 1980 - 2015",
+plot_index <- 6000:9000
+plot(niwot$date[plot_index], niwot$swe[plot_index], cex = 1,
+     pch = 16, ylim = c(0, 40), main = "Relationship between SWE and Precipitation",
      xlab = "", ylab = "Snow Water Equivalent", type = "l")
 lines(niwot$date[plot_index], niwot$precip_accum[plot_index],
       col = "blue", lwd = 3)
-lines(niwot$date[plot_index], niwot$temp_avg[plot_index],
-      col = "red", lwd = .5)
+legend("topright", c("SWE", "Precipitation"), col = c("blue", "black"), lwd = 3)
+
 
 # Look into the relationship with SWE and other promising
 # variables

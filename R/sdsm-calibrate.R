@@ -38,10 +38,8 @@ add_season <- function(dataframe, month_column) {
 # the linear model
 add_autoregression <- function(dataframe, response_name) {
     response <- ts(dataframe[, response_name])
-    lagged <- lag(response, -1)
-    tmp = cbind(lagged, response)
-    lagged_vec <- tmp[1:(nrow(tmp) - 1), 1]
-    dataframe$autoregression <- lagged_vec
+    lagged <- as.vector(lag(response, 1))
+    dataframe$autoregression <- lagged
     return(dataframe)
 }
 

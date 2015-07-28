@@ -275,7 +275,15 @@ get_narcaap_vars <- function(input_dir = "/glade/p/image/rmccrary/narccap/T6/NCE
         split_name <- unlist(strsplit(file, "_"))
         var_name <- split_name[1]
         level <- gsub("\\..*$", "", split_name[4])
+        level <- gsub("p", "", level)
+        if (is.na(level)) {
+            level <- "surface"
+        }
+        n <- length(norm_ts)
+        norm_ts_lag <- c(NA, norm_ts[1:(n-1)])
         write.csv(norm_ts, paste0(output_dir, var_name, "_", level, ".csv"),
+                  row.names = FALSE)
+        write.csv(norm_ts_lag, paste0(output_dir, var_name, "_", level, "_lag.csv"),
                   row.names = FALSE)
     }
     combine_csvs(input_dir = output_dir, output_dir = "/glade/p/work/lrich/", csv_name = "combined_df.csv")
