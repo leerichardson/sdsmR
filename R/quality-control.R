@@ -17,16 +17,18 @@ check_date <- function(dataframe) {
 check_missing <- function(dataframe) {
     num_complete <- sum(complete.cases(dataframe))
     if (num_complete != nrow(dataframe)) {
-        stop("Data has missing values.")
+        column_missing <- unlist(lapply(blogsville, function(x) any(is.na(x))))
+        col_miss_name <- names(which(column_missing == TRUE))
+        warning_msg <- paste0("Columns: ", col_miss_name, " has missing values")
+        warning("Data has missing values.")
     }
 }
 
 #' Check to make sure the data-set is appropriate for sdsmR.
 #'
 #' This function is meant to replicate the quality control
-#' section of the SDSM tool. It takes in the data-frame you
-#' are hoping to use and verify that it has all the components
-#' needed to work with the other sdsmR functions
+#' section of the SDSM tool. It takes in the data-frame and verifies
+#' that it has all the components needed for sdsmR functions
 #'
 #' @export
 #'

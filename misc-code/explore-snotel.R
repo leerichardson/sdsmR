@@ -1,4 +1,4 @@
-g# Cleaning/Tidying the data ----------------------------
+# Cleaning/Tidying the data ----------------------------
 
 # Download the NIWOT dataset from the online link
 niwot_url <- "http://www.wcc.nrcs.usda.gov/reportGenerator/view_csv/customSingleStationReport/daily/663:CO:SNTL%7Cid=%22%22%7Cname/POR_BEGIN,POR_END/WTEQ::value,PREC::value,TMAX::value,TMIN::value,TAVG::value,PRCP::value"
@@ -43,9 +43,8 @@ par(mfrow = c(1, 1))
 
 # Plot just the Snow Trend
 plot(plot_dates, niwot$swe[plot_index], main = "Snow Water Equivalent Pattern",
-     type = "l", xlab = "", ylab = "Snow Water Equivalent")
-
-
+     type = "l", xlab = "", ylab = "Snow Water Equivalent", cex.main = 2,
+     cex.lab = 1.4)
 
 
 # Use the generate_table function which comes with the sdsmR
@@ -57,10 +56,10 @@ generate_table("/home/lee/niwot", niwot, y = "swe")
 plot_index <- 6000:9000
 plot(niwot$date[plot_index], niwot$swe[plot_index], cex = 1,
      pch = 16, ylim = c(0, 40), main = "Relationship between SWE and Precipitation",
-     xlab = "", ylab = "Snow Water Equivalent", type = "l")
+     xlab = "", ylab = "Snow Water Equivalent", type = "l", cex.main = 1.8, cex.lab = 1.4)
 lines(niwot$date[plot_index], niwot$precip_accum[plot_index],
       col = "blue", lwd = 3)
-legend("topright", c("SWE", "Precipitation"), col = c("blue", "black"), lwd = 3)
+legend("topright", c("SWE", "Precipitation"), col = c("black", "blue"), lwd = 3)
 
 
 # Look into the relationship with SWE and other promising

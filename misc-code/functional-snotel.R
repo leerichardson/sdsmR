@@ -51,11 +51,10 @@ for (year in year_index) {
 
         print(year)
         if (count == 1) {
-            browser()
             date_range <- data$date
             plot(date_range, data$swe, type = "l", ylim = c(0, 30), col = sample(colours(), 1),
                  main = "SWE Trajectories in Niwot from 1980-2015",
-                 xlab = "", ylab = "Snow Water Equivalent")
+                 xlab = "", ylab = "Snow Water Equivalent", cex.main = 1.8, cex.lab = 1.4)
         } else {
             lines(date_range, data$swe, type = "l", ylim = c(0, 30), col = sample(colours(), 1))
         }

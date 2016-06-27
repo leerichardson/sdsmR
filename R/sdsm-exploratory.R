@@ -46,7 +46,7 @@ name_lookup <- function(filename){
     return(var.name)
 }
 
-compute_error <- function(predictions, observed, type = "regression"){
+compute_error <- function(predictions, observed, type = "regression") {
     if (type == "regression") {
         rmse <- sqrt(sum((predictions - observed)^2)/length(predictions))
         mae <- sum(abs(predictions - observed))/length(predictions)
@@ -130,7 +130,7 @@ generate_table <- function(plotname, dataframe, y = "empty", conditional = FALSE
     }
 
     # Based on whether or not the model is conditional or unconditional,
-    # subset the dataframe accordingly. IE: if it's
+    # subset the dataframe accordingly.
     if (conditional == TRUE) {
         dataframe$cond <- ifelse(dataframe[, y] > 0, 1, 0)
         if (conditional_step == 1) {
@@ -152,12 +152,12 @@ generate_table <- function(plotname, dataframe, y = "empty", conditional = FALSE
 
     # Create a matrix to store the results in and
     # name the columns and rows to represent the variables and times
-    results <- matrix(NA, nrow=num_vars, ncol=13)
+    results <- matrix(NA, nrow = num_vars, ncol = 13)
     colnames(results) <- times
     rownames(results) <- names(dataframe)
 
-    pdf(paste0(plotname, "_cor_matrices.pdf"), height = 15, width=15)
-    par(oma=c(1,1,5,1))
+    pdf(paste0(plotname, "_cor_matrices.pdf"), height = 15, width = 15)
+    par(oma = c(1, 1, 5, 1))
     for (i in 1:length(times)) {
         # Subset the initial dataframe based on the month
         if (i < 10) {

@@ -179,7 +179,6 @@ predict_swe_peak <- function(temp_vec, precip_vec, date_vec = NULL, model) {
 }
 
 predict_swe_start <- function(temp_vec, precip_vec, date_vec = NULL, model) {
-
     # Compute the monthly covariates using this particular
     # temp and recip vector
     predictors <- compute_monthly_covs(temp_vec, precip_vec, date_vec)
@@ -195,12 +194,12 @@ predict_swe_start <- function(temp_vec, precip_vec, date_vec = NULL, model) {
 # of the year.
 predict_swe_period <- function(temp_vec, precip_vec, date_vec = NULL, decline_rate = .5,
                                percent_snow = .9, first_day = 95, peak_model,
-                               start_model) {
+                               start_model, interval = FALSE) {
 
     # Estimate the parameters (first day and peak) for this particular
     # period using the two linear models and temp + precip vectors.
-    peak_snow <- predict_swe_peak(temp_vec, precip_vec, date_vec, peak_model)
     first_day <- floor(predict_swe_start(temp_vec, precip_vec, date_vec, start_model))
+    peak_snow <- predict_swe_peak(temp_vec, precip_vec, date_vec, peak_model)
 
     # Calculate Precip Accumulation after the first day has
     # been estimated
@@ -225,7 +224,7 @@ predict_swe_period <- function(temp_vec, precip_vec, date_vec = NULL, decline_ra
             peaked <- "yes"
             swe_results[day] <- current_swe
         } else if (peaked == "yes" & current_swe > 0) {
-            current_swe <- current_swe - decline_rate
+            current_swe <- current_swe - (decline_rate + rnorm(n = 1, mean = 0, sd = .2))
             if (current_swe < 0) {
                 current_swe = 0
             }

@@ -17,11 +17,30 @@ check_elevation <- function(ncdf_filename) {
     }
 }
 
+# Function to pull in indices of a ncdf file of a specified
+# time series
+subset_date <- function(ncdf_file, start_date, end_date) {
+    # Grab the "initial date" variable from the ncdf file
+    days_since <- gsub("days since ", "", ncdf_file$dim$time$units)
+    days_since <- as.Date(days_since)
+
+    # Grab the days since variable and add this to the start
+    # date in order to get a vector of correct_dates in R
+    days_after <- floor(ncdf_file$dim$time$vals)
+    date_vec <- days_since + days_after
+
+    # Pull the indices which are within the specified
+    # range indicated in the function input
+    indices <- which(date_vec >= as.Date(start_date) & date_vec <= as.Date(end_date))
+    return(indices)
+}
+
 # Function to extract a time series from the closest gridbox
 # based on an input latitude and longitude and a ncdf object. Returns
 # a numeric time series with al of the observations from this gridbox
 # within a specific file
-pull_timeseries <- function(ncdf_filename, lat, lon, level = NULL) {
+pull_timeseries <- function(ncdf_filename, lat, lon, level = NULL,
+                            start_date = NULL, end_date = NULL) {
     # Open the connection of the desired netCDF4 file
     # and pull out the vectors of all possible latitudes and
     # longitudes contained within the file
@@ -57,10 +76,17 @@ pull_timeseries <- function(ncdf_filename, lat, lon, level = NULL) {
     # the time series based on the closest indexes which we just
     # determined above.
     var <- ncvar_get(ncdf)
-    if (is.null(level) == TRUE) {
+    if (is.null(level)) {
         ts <- var[lon_index, lat_index, ]
     } else {
         ts <- var[lon_index, lat_index, level_index, ]
+    }
+
+    # If a specific time subset is specified, call the subset_date
+    # function in order to
+    if (!is.null(start_date)) {
+        time_index <- subset_date(ncdf, start_date, end_date)
+        ts <- ts[time_index]
     }
 
     # Close the connection with the netCDF file and return the
@@ -241,8 +267,8 @@ get_ncep_vars <- function(input_dir = "/glade/p/image/rmccrary/NCEP2/",
 }
 
 get_narcaap_vars <- function(input_dir = "/glade/p/image/rmccrary/narccap/T6/NCEP2/CRCM/ncep/",
-                                      output_dir = "/glade/p/work/lrich/ncep_vars/narcaap/",
-                                      latitude, longitude) {
+                                      output_dir = NULL, latitude, longitude, normalize = TRUE,
+                                      start_date = NULL, end_date = NULL) {
 
     # Make sure that the ncdf4 package is installed before someone runs
     # this function.
@@ -270,8 +296,14 @@ get_narcaap_vars <- function(input_dir = "/glade/p/image/rmccrary/narccap/T6/NCE
     for (file in filenames) {
         print(file)
         ts <- pull_timeseries(ncdf_filename = paste0(input_dir, file),
-                              lat = latitude, lon = longitude)
-        norm_ts <- (ts - mean(ts))/sd(ts)
+                              lat = latitude, lon = longitude,
+                              start_date = start_date, end_date = end_date)
+
+        # Normalize the vector if that is asked for.
+        if (normalize == TRUE) {
+            ts <- (ts - mean(ts))/sd(ts)
+        }
+
         split_name <- unlist(strsplit(file, "_"))
         var_name <- split_name[1]
         level <- gsub("\\..*$", "", split_name[4])
@@ -279,11 +311,11 @@ get_narcaap_vars <- function(input_dir = "/glade/p/image/rmccrary/narccap/T6/NCE
         if (is.na(level)) {
             level <- "surface"
         }
-        n <- length(norm_ts)
-        norm_ts_lag <- c(NA, norm_ts[1:(n-1)])
-        write.csv(norm_ts, paste0(output_dir, var_name, "_", level, ".csv"),
+        n <- length(ts)
+        ts_lag <- c(NA, ts[1:(n-1)])
+        write.csv(ts, paste0(output_dir, var_name, "_", level, ".csv"),
                   row.names = FALSE)
-        write.csv(norm_ts_lag, paste0(output_dir, var_name, "_", level, "_lag.csv"),
+        write.csv(ts_lag, paste0(output_dir, var_name, "_", level, "_lag.csv"),
                   row.names = FALSE)
     }
     combine_csvs(input_dir = output_dir, output_dir = "/glade/p/work/lrich/", csv_name = "combined_df.csv")
